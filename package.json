@@ -17,6 +17,9 @@
   "author": "Team Cascade (Akash, Thackrey, Aryan, Manthan)",
   "license": "MIT",
   "dependencies": {
-    "expo": "^57.0.31"
+    "expo": "~58.0.19"
+  },
+  "devDependencies": {
+    "@types/react": "~19.3.0"
   }
 }
