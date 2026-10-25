@@ -1,4 +1,4 @@
-import { DataPayload, BaselineResult } from '../shared/types';
+import type { DataPayload, BaselineResult } from '../shared/types.ts';
 
 /**
  * What 95% of teams in the hackathon room build:
@@ -13,7 +13,7 @@ export class NaiveCompetitorBaseline {
     const rawTime = typeof payload.timestamp === 'string' ? Date.parse(payload.timestamp) : payload.timestamp;
 
     // Failure Mode 1: 1970 clock reset crashes naive time diff logic
-    if (rawTime < 172800000) {
+    if (isNaN(rawTime) || rawTime < 172800000) {
       return {
         decisionId: `base-${Date.now()}`,
         rawLLMOutput: 'ERROR: Time index out of range (-1702848200000ms delta). Database transaction aborted.',

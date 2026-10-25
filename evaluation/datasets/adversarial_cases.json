@@ -20,5 +20,30 @@
     "source": "out-of-order-mesh-node",
     "rawInput": "Ledger debit event arriving before causal credit parent",
     "metadata": { "syncLagMs": 45000 }
+  },
+  {
+    "id": "adv-004-delayed-upi-duplicate",
+    "timestamp": 1729840240000,
+    "source": "paytm-soundbox",
+    "rawInput": "Paytm par 40 rupaye prapt hue (delayed 28s after customer verbal settlement)",
+    "metadata": { "upiAmount": 40, "delaySeconds": 28, "app": "PAYTM" }
+  },
+  {
+    "id": "adv-005-multi-turn-negotiation",
+    "timestamp": 1729840300000,
+    "source": "viterbi-dialogue-stream",
+    "rawInput": "Cust: 'tamatar kitne ka' -> Vend: '40 ka diya' -> Cust: 'nahi 30 lagao' -> Vend: 'ok' -> Cust: 'aadha kilo kar do'",
+    "metadata": {
+      "turns": [
+        { "role": "CUSTOMER", "text": "tamatar kitne ka" },
+        { "role": "VENDOR", "text": "40 ka diya" },
+        { "role": "CUSTOMER", "text": "nahi 30 lagao" },
+        { "role": "VENDOR", "text": "ok" },
+        { "role": "CUSTOMER", "text": "aadha kilo kar do" }
+      ],
+      "expectedAgreedRate": 30,
+      "expectedQuantity": 0.5,
+      "expectedDerivedCash": 15.0
+    }
   }
 ]
