@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Modal, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Props {
@@ -16,32 +16,60 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, initi
   const [missingKg, setMissingKg] = useState(initialMissingKg.toString());
   const [temp, setTemp] = useState('39');
   const [hoursExposed, setHoursExposed] = useState('7');
+  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ spoilage: number; eating: number; theft: number } | null>({
     spoilage: 43.8,
     eating: 47.4,
     theft: 8.8
   });
 
-  const handleCompute = () => {
-    const t = parseFloat(temp) || 35;
-    const h = parseFloat(hoursExposed) || 6;
-    const mKg = parseFloat(missingKg) || 4.0;
-    
-    // Bayesian temperature-accelerated exponential rot factor
-    const rotBase = Math.min(75, Math.max(15, (t - 25) * 3.2 + (h * 1.8)));
-    const eatingBase = Math.max(10, 85 - rotBase);
-    const theftBase = Math.max(5, 100 - (rotBase + eatingBase));
-    const total = rotBase + eatingBase + theftBase;
-
-    const computed = {
-      spoilage: Number(((rotBase / total) * 100).toFixed(1)),
-      eating: Number(((eatingBase / total) * 100).toFixed(1)),
-      theft: Number(((theftBase / total) * 100).toFixed(1))
-    };
-
-    setResult(computed);
-    if (onCalculate) {
-      onCalculate(computed.spoilage, computed.eating, computed.theft, commodity, mKg);
+  const handleCompute = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${apiBaseUrl}/vendor/loss`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          item: commodity.toLowerCase(),
+          qty: parseFloat(missingKg) || 4,
+          unit: 'kg',
+          env: { temp: parseFloat(temp) || 39, hrs: parseFloat(hoursExposed) || 7, hour: 14, devices: 2 }
+        })
+      });
+      const data = await res.json();
+      if (data.ok && data.report) {
+        const r = data.report;
+        const toPct = (val, def) => {
+          if (val === undefined || val === null) return def;
+          const n = Number(val);
+          return Number((n <= 1.0 && n > 0 ? n * 100 : n).toFixed(1));
+        };
+        const computed = {
+          spoilage: toPct(r.rotPct ?? r.spoilage, 43.8),
+          eating: toPct(r.eatingPct ?? r.eating, 47.4),
+          theft: toPct(r.theftPct ?? r.theft, 8.8)
+        };
+        setResult(computed);
+        if (onCalculate) onCalculate(computed.spoilage, computed.eating, computed.theft, commodity, parseFloat(missingKg) || 4);
+      }
+    } catch {
+      // Fallback to local formula if API unavailable
+      const t = parseFloat(temp) || 35;
+      const h = parseFloat(hoursExposed) || 6;
+      const mKg = parseFloat(missingKg) || 4.0;
+      const rotBase = Math.min(75, Math.max(15, (t - 25) * 3.2 + (h * 1.8)));
+      const eatingBase = Math.max(10, 85 - rotBase);
+      const theftBase = Math.max(5, 100 - (rotBase + eatingBase));
+      const total = rotBase + eatingBase + theftBase;
+      const computed = {
+        spoilage: Number(((rotBase / total) * 100).toFixed(1)),
+        eating: Number(((eatingBase / total) * 100).toFixed(1)),
+        theft: Number(((theftBase / total) * 100).toFixed(1))
+      };
+      setResult(computed);
+      if (onCalculate) onCalculate(computed.spoilage, computed.eating, computed.theft, commodity, mKg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -115,9 +143,15 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, initi
             </View>
 
             {/* ELECTRIC LIME CTA */}
-            <TouchableOpacity style={styles.calcBtn} onPress={handleCompute}>
-              <Ionicons name="sparkles-outline" size={19} color="#073B3A" />
-              <Text style={styles.calcBtnText}>Check possible reasons</Text>
+            <TouchableOpacity style={styles.calcBtn} onPress={handleCompute} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#073B3A" />
+              ) : (
+                <>
+                  <Ionicons name="sparkles-outline" size={19} color="#073B3A" />
+                  <Text style={styles.calcBtnText}>Check possible reasons</Text>
+                </>
+              )}
             </TouchableOpacity>
 
             {result && (
@@ -285,6 +319,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     marginVertical: 12,
     shadowColor: '#E2FD52',
     shadowOffset: { width: 0, height: 4 },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -17,6 +17,36 @@ interface Props {
   onSyncComplete?: (mergedCount: number) => void;
 }
 
+interface DeviceInfo {
+  deviceId: string;
+  name: string;
+  signal: string;
+  pendingMergeCount: number;
+  lastSyncAt: number;
+  status: 'NEARBY' | 'SYNCING' | 'SYNCED' | 'SCANNING';
+}
+
+const FALLBACK_DEVICE: DeviceInfo = {
+  deviceId: 'DEV_OFFLINE',
+  name: 'Nearby Device',
+  signal: 'Scanning...',
+  pendingMergeCount: 0,
+  lastSyncAt: 0,
+  status: 'SCANNING'
+};
+
+function getLastSyncedLabel(lastSyncAt: number): string {
+  if (!lastSyncAt) return 'Never synced';
+  const diffMs = Date.now() - lastSyncAt;
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins === 1) return '1 minute ago';
+  if (mins < 60) return `${mins} minutes ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs === 1) return '1 hour ago';
+  return `${hrs} hours ago`;
+}
+
 export const SyncModal: React.FC<Props> = ({
   visible,
   onClose,
@@ -25,23 +55,89 @@ export const SyncModal: React.FC<Props> = ({
 }) => {
   const [syncing, setSyncing] = useState(false);
   const [synced, setSynced] = useState(false);
+  const [fetchingDevices, setFetchingDevices] = useState(false);
+  const [devices, setDevices] = useState<DeviceInfo[]>([]);
+
+  // Fetch devices when modal opens
+  useEffect(() => {
+    if (!visible) return;
+    setSynced(false);
+    const loadDevices = async () => {
+      setFetchingDevices(true);
+      try {
+        const res = await fetch(`${apiBaseUrl}/vendor/sync/devices`);
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setDevices(data as DeviceInfo[]);
+        } else if (data && Array.isArray(data.devices) && data.devices.length > 0) {
+          setDevices(data.devices as DeviceInfo[]);
+        } else {
+          setDevices([FALLBACK_DEVICE]);
+        }
+      } catch {
+        setDevices([FALLBACK_DEVICE]);
+      } finally {
+        setFetchingDevices(false);
+      }
+    };
+    loadDevices();
+  }, [visible]);
 
   const handleSync = async () => {
     setSyncing(true);
+    // Mark all devices as SYNCING in local state
+    setDevices(prev => prev.map(d => ({ ...d, status: 'SYNCING' as const })));
     try {
       const res = await fetch(`${apiBaseUrl}/vendor/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nodes: [] })
+        body: JSON.stringify({ nodes: devices.map(d => d.deviceId) })
       });
       const data = await res.json();
       setSynced(true);
-      if (onSyncComplete) onSyncComplete(data.merged || 3);
+      // Mark all devices as SYNCED
+      setDevices(prev => prev.map(d => ({ ...d, status: 'SYNCED' as const, lastSyncAt: Date.now() })));
+      if (onSyncComplete) onSyncComplete(data.merged || devices.reduce((s, d) => s + d.pendingMergeCount, 0));
     } catch {
       setSynced(true);
-      if (onSyncComplete) onSyncComplete(3);
+      setDevices(prev => prev.map(d => ({ ...d, status: 'SYNCED' as const, lastSyncAt: Date.now() })));
+      if (onSyncComplete) onSyncComplete(devices.reduce((s, d) => s + d.pendingMergeCount, 0));
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const getStatusPill = (device: DeviceInfo) => {
+    switch (device.status) {
+      case 'NEARBY':
+        return (
+          <View style={[styles.statusPill, styles.pillNearby]}>
+            <View style={[styles.pillDot, { backgroundColor: '#79AF00' }]} />
+            <Text style={[styles.pillText, { color: '#376300' }]}>Nearby</Text>
+          </View>
+        );
+      case 'SYNCING':
+        return (
+          <View style={[styles.statusPill, styles.pillSyncing]}>
+            <ActivityIndicator size="small" color="#0284C7" style={{ marginRight: 4, transform: [{ scale: 0.7 }] }} />
+            <Text style={[styles.pillText, { color: '#0284C7' }]}>Syncing</Text>
+          </View>
+        );
+      case 'SYNCED':
+        return (
+          <View style={[styles.statusPill, styles.pillSynced]}>
+            <View style={[styles.pillDot, { backgroundColor: '#9CA3AF' }]} />
+            <Text style={[styles.pillText, { color: '#6B7280' }]}>Synced</Text>
+          </View>
+        );
+      case 'SCANNING':
+      default:
+        return (
+          <View style={[styles.statusPill, styles.pillScanning]}>
+            <ActivityIndicator size="small" color="#9CA3AF" style={{ marginRight: 4, transform: [{ scale: 0.7 }] }} />
+            <Text style={[styles.pillText, { color: '#9CA3AF' }]}>Scanning</Text>
+          </View>
+        );
     }
   };
 
@@ -74,20 +170,34 @@ export const SyncModal: React.FC<Props> = ({
               </Text>
             </View>
 
-            {/* Nearby Device Card */}
-            <View style={styles.deviceCard}>
-              <View style={styles.deviceIconBox}>
-                <Ionicons name="phone-portrait" size={22} color="#073B3A" />
+            {/* Device Cards */}
+            {fetchingDevices ? (
+              <View style={styles.scanningState}>
+                <ActivityIndicator color="#073B3A" />
+                <Text style={styles.scanningText}>Scanning for BLE devices...</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.deviceName}>Ramesh's Phone (Helper)</Text>
-                <Text style={styles.deviceMeta}>Signal: Strong • 3 new sales to merge</Text>
-              </View>
-              <View style={styles.readyPill}>
-                <View style={styles.greenDot} />
-                <Text style={styles.readyText}>Nearby</Text>
-              </View>
-            </View>
+            ) : (
+              devices.map(device => (
+                <View key={device.deviceId} style={styles.deviceCard}>
+                  <View style={styles.deviceIconBox}>
+                    <Ionicons name="phone-portrait" size={22} color="#073B3A" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.deviceName}>{device.name}</Text>
+                    <Text style={styles.deviceMeta}>
+                      Signal: {device.signal}
+                      {device.pendingMergeCount > 0 ? ` • ${device.pendingMergeCount} new sales to merge` : ''}
+                    </Text>
+                    {device.lastSyncAt > 0 && (
+                      <Text style={styles.deviceLastSync}>
+                        last synced {getLastSyncedLabel(device.lastSyncAt)}
+                      </Text>
+                    )}
+                  </View>
+                  {getStatusPill(device)}
+                </View>
+              ))
+            )}
 
             {synced && (
               <View style={styles.successBox}>
@@ -102,14 +212,14 @@ export const SyncModal: React.FC<Props> = ({
             <TouchableOpacity
               style={styles.syncButton}
               onPress={handleSync}
-              disabled={syncing}
+              disabled={syncing || fetchingDevices}
             >
               {syncing ? (
                 <ActivityIndicator color="#073B3A" />
               ) : (
                 <>
                   <Text style={styles.syncButtonText}>
-                    {synced ? 'Re-Sync Live Sales' : 'Combine Today’s Sales (Bluetooth)'}
+                    {synced ? 'Re-Sync Live Sales' : 'Combine Today\'s Sales (Bluetooth)'}
                   </Text>
                   <Ionicons name="git-merge-outline" size={18} color="#073B3A" style={{ marginLeft: 8 }} />
                 </>
@@ -191,6 +301,23 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: '500',
   },
+  scanningState: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 18,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 16,
+  },
+  scanningText: {
+    marginLeft: 10,
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
   deviceCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -199,7 +326,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   deviceIconBox: {
     width: 42,
@@ -220,25 +347,39 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6B7280',
   },
-  readyPill: {
+  deviceLastSync: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1FFE5',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  greenDot: {
+  pillNearby: {
+    backgroundColor: '#F1FFE5',
+  },
+  pillSyncing: {
+    backgroundColor: '#F0F9FF',
+  },
+  pillSynced: {
+    backgroundColor: '#F3F4F6',
+  },
+  pillScanning: {
+    backgroundColor: '#F3F4F6',
+  },
+  pillDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#79AF00',
     marginRight: 4,
   },
-  readyText: {
+  pillText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#376300',
   },
   successBox: {
     flexDirection: 'row',
@@ -287,5 +428,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#4B5563',
+  },
+  // legacy - kept for compatibility
+  readyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1FFE5',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  greenDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#79AF00',
+    marginRight: 4,
+  },
+  readyText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#376300',
   },
 });

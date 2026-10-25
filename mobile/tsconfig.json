@@ -1,4 +1,7 @@
 {
-  "compilerOptions": {},
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "skipLibCheck": true
+  },
   "extends": "expo/tsconfig.base"
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -35,135 +35,160 @@ export const UpiEventsModal: React.FC<Props> = ({
   onUpiPaymentConfirmed
 }) => {
   const [loading, setLoading] = useState(false);
-  const [feed, setFeed] = useState<UpiFeedItem[]>([
-    {
-      id: 'upi-1',
-      type: 'CONFIRMED_SALE',
-      title: 'Paytm Soundbox QR Scan',
-      subtitle: 'Chime & bank notification matched • Credited to Sales Revenue',
-      amount: 30,
-      badgeText: 'Confirmed Shop Sale',
-      time: 'Just now',
-      status: 'CONFIRMED'
-    },
-    {
-      id: 'upi-2',
-      type: 'PERSONAL_TRANSFER',
-      title: 'GPay Transfer from Sister',
-      subtitle: 'Personal family money • Kept separate from shop accounts',
-      amount: 2000,
-      badgeText: 'Personal Money (Equity)',
-      time: '12:15 PM',
-      status: 'ISOLATED'
-    },
-    {
-      id: 'upi-3',
-      type: 'NEIGHBOR_CHIME',
-      title: 'Neighboring Stall Soundbox',
-      subtitle: 'Acoustic audio heard with no phone notification • Quarantined',
-      amount: 50,
-      badgeText: 'Neighbor Chime Ignored',
-      time: '11:40 AM',
-      status: 'QUARANTINED'
-    }
-  ]);
+  const [simulatingKind, setSimulatingKind] = useState<'PAYTM' | 'PHONEPE' | 'SOUNDBOX' | null>(null);
+  const [feed, setFeed] = useState<UpiFeedItem[]>([]);
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
 
-  const handleSimulateEvent = async (kind: 'SALE' | 'PERSONAL' | 'NEIGHBOR') => {
+  // Fetch recent UPI events when modal opens
+  useEffect(() => {
+    if (!visible) return;
+    const fetchState = async () => {
+      try {
+        const res = await fetch(`${apiBaseUrl}/vendor/state`);
+        const data = await res.json();
+        // Extract upi events from state if available
+        const events: UpiFeedItem[] = [];
+        if (data && data.upiEvents && Array.isArray(data.upiEvents)) {
+          data.upiEvents.forEach((e: any, idx: number) => {
+            const status: UpiFeedItem['status'] =
+              e.decision?.status === 'CONFIRMED' ? 'CONFIRMED' :
+              e.decision?.status === 'ISOLATED' ? 'ISOLATED' : 'QUARANTINED';
+            events.push({
+              id: e.id || `upi-fetched-${idx}`,
+              type: status === 'CONFIRMED' ? 'CONFIRMED_SALE' : status === 'ISOLATED' ? 'PERSONAL_TRANSFER' : 'NEIGHBOR_CHIME',
+              title: e.title || e.appName || 'UPI Event',
+              subtitle: e.subtitle || e.rawText || '',
+              amount: e.amount || 0,
+              badgeText: status === 'CONFIRMED' ? 'Confirmed Shop Sale' : status === 'ISOLATED' ? 'Personal Money (Equity)' : 'Neighbor Chime Ignored',
+              time: e.time || 'Today',
+              status
+            });
+          });
+        }
+        setFeed(events);
+      } catch {
+        // Start with empty feed if API unavailable
+        setFeed([]);
+      }
+    };
+    fetchState();
+  }, [visible]);
+
+  const handleSimulatePaytm = async () => {
+    setSimulatingKind('PAYTM');
     setLoading(true);
-    let eventType = 'SOUNDBOX_CHIME';
-    let amount = 30;
-    let appName = 'PAYTM';
-    let rawText = '';
-    let payerName = 'Customer';
-
-    if (kind === 'SALE') {
-      eventType = 'APP_NOTIFICATION';
-      amount = 40;
-      appName = 'PAYTM';
-      rawText = 'Received ₹40.00 on Paytm QR at Akash Poha Stall';
-      payerName = 'Rahul S.';
-    } else if (kind === 'PERSONAL') {
-      eventType = 'APP_NOTIFICATION';
-      amount = 2000;
-      appName = 'GPAY';
-      rawText = 'Pooja Rawat sent you ₹2,000 via Google Pay';
-      payerName = 'Sister (Family)';
-    } else if (kind === 'NEIGHBOR') {
-      eventType = 'SOUNDBOX_CHIME';
-      amount = 50;
-      appName = 'PAYTM';
-      rawText = 'Paytm par pachaas rupaye prapt hue';
-    }
-
     try {
       const res = await fetch(`${apiBaseUrl}/vendor/upi/event`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          eventType,
-          amount,
-          timestamp: Date.now(),
-          appName,
-          rawText,
-          payerName
+          eventType: 'SMS_NOTIFICATION',
+          amount: 30,
+          appName: 'PAYTM',
+          rawText: 'Rs. 30 received from Customer via Paytm'
         })
       });
       const data = await res.json();
-
-      let newItem: UpiFeedItem;
-      if (kind === 'SALE') {
-        newItem = {
-          id: `upi-live-${Date.now()}`,
-          type: 'CONFIRMED_SALE',
-          title: `Paytm Soundbox QR (+₹${amount})`,
-          subtitle: 'Dual verified • Added to today’s stall sales revenue',
-          amount,
-          badgeText: 'Confirmed Shop Sale',
-          time: 'Just now',
-          status: 'CONFIRMED'
-        };
-        if (onUpiPaymentConfirmed) onUpiPaymentConfirmed(amount, true);
-        setStatusNotice(`✓ Verified stall sale (+₹${amount}) added to ledger.`);
-      } else if (kind === 'PERSONAL') {
-        newItem = {
-          id: `upi-live-${Date.now()}`,
-          type: 'PERSONAL_TRANSFER',
-          title: `GPay Family Money (+₹${amount.toLocaleString('en-IN')})`,
-          subtitle: 'Personal home money • Kept separate so shop profit remains exact',
-          amount,
-          badgeText: 'Personal Money (Equity)',
-          time: 'Just now',
-          status: 'ISOLATED'
-        };
-        setStatusNotice(`✓ Personal money (+₹${amount.toLocaleString('en-IN')}) safely isolated from shop.`);
-      } else {
-        newItem = {
-          id: `upi-live-${Date.now()}`,
-          type: 'NEIGHBOR_CHIME',
-          title: `Neighbor Stall Chime (₹${amount})`,
-          subtitle: 'Audio chime heard with 0 matching bank notification • Discarded',
-          amount,
-          badgeText: 'Neighbor Chime Ignored',
-          time: 'Just now',
-          status: 'QUARANTINED'
-        };
-        setStatusNotice(`⚠ Neighbor stall chime (₹${amount}) ignored safely.`);
-      }
-
+      const serverStatus: UpiFeedItem['status'] =
+        data?.decision?.status === 'CONFIRMED' ? 'CONFIRMED' :
+        data?.decision?.status === 'ISOLATED' ? 'ISOLATED' : 'CONFIRMED';
+      const newItem: UpiFeedItem = {
+        id: `upi-live-${Date.now()}`,
+        type: 'CONFIRMED_SALE',
+        title: 'Paytm SMS (+₹30)',
+        subtitle: 'Rs. 30 received from Customer via Paytm',
+        amount: 30,
+        badgeText: 'Confirmed Shop Sale',
+        time: 'Just now',
+        status: serverStatus
+      };
       setFeed(prev => [newItem, ...prev]);
+      if (serverStatus === 'CONFIRMED' && onUpiPaymentConfirmed) onUpiPaymentConfirmed(30, true);
+      setStatusNotice('✓ Paytm ₹30 event processed by server.');
     } catch {
-      // Offline simulation
-      if (kind === 'SALE') {
-        if (onUpiPaymentConfirmed) onUpiPaymentConfirmed(amount, true);
-        setStatusNotice(`✓ Verified stall sale (+₹${amount}) recorded.`);
-      } else if (kind === 'PERSONAL') {
-        setStatusNotice(`✓ Personal money (+₹${amount.toLocaleString('en-IN')}) safely isolated.`);
-      } else {
-        setStatusNotice(`⚠ Neighbor stall chime (₹${amount}) ignored safely.`);
-      }
+      setStatusNotice('⚠ Could not reach server for Paytm event.');
     } finally {
       setLoading(false);
+      setSimulatingKind(null);
+    }
+  };
+
+  const handleSimulatePhonePe = async () => {
+    setSimulatingKind('PHONEPE');
+    setLoading(true);
+    try {
+      const res = await fetch(`${apiBaseUrl}/vendor/upi/event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'SMS_NOTIFICATION',
+          amount: 50,
+          appName: 'PHONEPE',
+          rawText: 'Rs. 50 credited via PhonePe'
+        })
+      });
+      const data = await res.json();
+      const serverStatus: UpiFeedItem['status'] =
+        data?.decision?.status === 'CONFIRMED' ? 'CONFIRMED' :
+        data?.decision?.status === 'ISOLATED' ? 'ISOLATED' : 'CONFIRMED';
+      const newItem: UpiFeedItem = {
+        id: `upi-live-${Date.now()}`,
+        type: 'CONFIRMED_SALE',
+        title: 'PhonePe SMS (+₹50)',
+        subtitle: 'Rs. 50 credited via PhonePe',
+        amount: 50,
+        badgeText: 'Confirmed Shop Sale',
+        time: 'Just now',
+        status: serverStatus
+      };
+      setFeed(prev => [newItem, ...prev]);
+      if (serverStatus === 'CONFIRMED' && onUpiPaymentConfirmed) onUpiPaymentConfirmed(50, true);
+      setStatusNotice('✓ PhonePe ₹50 event processed by server.');
+    } catch {
+      setStatusNotice('⚠ Could not reach server for PhonePe event.');
+    } finally {
+      setLoading(false);
+      setSimulatingKind(null);
+    }
+  };
+
+  const handleSimulateSoundbox = async () => {
+    setSimulatingKind('SOUNDBOX');
+    setLoading(true);
+    try {
+      const res = await fetch(`${apiBaseUrl}/vendor/upi/event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'SOUNDBOX_CHIME',
+          amount: 80,
+          appName: 'PAYTM',
+          confidence: 0.96
+        })
+      });
+      const data = await res.json();
+      const serverStatus: UpiFeedItem['status'] =
+        data?.decision?.status === 'CONFIRMED' ? 'CONFIRMED' :
+        data?.decision?.status === 'ISOLATED' ? 'ISOLATED' :
+        data?.decision?.status === 'QUARANTINED' ? 'QUARANTINED' : 'CONFIRMED';
+      const newItem: UpiFeedItem = {
+        id: `upi-live-${Date.now()}`,
+        type: serverStatus === 'QUARANTINED' ? 'NEIGHBOR_CHIME' : 'CONFIRMED_SALE',
+        title: 'Paytm Soundbox Chime (+₹80)',
+        subtitle: 'Soundbox chime detected with high confidence',
+        amount: 80,
+        badgeText: serverStatus === 'QUARANTINED' ? 'Neighbor Chime Ignored' : 'Confirmed Shop Sale',
+        time: 'Just now',
+        status: serverStatus
+      };
+      setFeed(prev => [newItem, ...prev]);
+      if (serverStatus === 'CONFIRMED' && onUpiPaymentConfirmed) onUpiPaymentConfirmed(80, true);
+      setStatusNotice(`✓ Soundbox ₹80 event processed (${serverStatus}).`);
+    } catch {
+      setStatusNotice('⚠ Could not reach server for Soundbox event.');
+    } finally {
+      setLoading(false);
+      setSimulatingKind(null);
     }
   };
 
@@ -201,29 +226,41 @@ export const UpiEventsModal: React.FC<Props> = ({
             <View style={styles.simRow}>
               <TouchableOpacity
                 style={[styles.simButton, { backgroundColor: '#F1FFE5', borderColor: '#79AF00' }]}
-                onPress={() => handleSimulateEvent('SALE')}
+                onPress={handleSimulatePaytm}
                 disabled={loading}
               >
-                <Ionicons name="checkmark-circle" size={16} color="#073B3A" style={{ marginRight: 4 }} />
-                <Text style={styles.simButtonText}>Stall QR (₹40)</Text>
+                {simulatingKind === 'PAYTM' ? (
+                  <ActivityIndicator size="small" color="#073B3A" style={{ marginRight: 4 }} />
+                ) : (
+                  <Ionicons name="checkmark-circle" size={16} color="#073B3A" style={{ marginRight: 4 }} />
+                )}
+                <Text style={styles.simButtonText}>Paytm ₹30</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.simButton, { backgroundColor: '#EFF6FF', borderColor: '#3B82F6' }]}
-                onPress={() => handleSimulateEvent('PERSONAL')}
+                onPress={handleSimulatePhonePe}
                 disabled={loading}
               >
-                <Ionicons name="people" size={16} color="#1D4ED8" style={{ marginRight: 4 }} />
-                <Text style={[styles.simButtonText, { color: '#1D4ED8' }]}>Sister (₹2,000)</Text>
+                {simulatingKind === 'PHONEPE' ? (
+                  <ActivityIndicator size="small" color="#1D4ED8" style={{ marginRight: 4 }} />
+                ) : (
+                  <Ionicons name="people" size={16} color="#1D4ED8" style={{ marginRight: 4 }} />
+                )}
+                <Text style={[styles.simButtonText, { color: '#1D4ED8' }]}>PhonePe ₹50</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.simButton, { backgroundColor: '#F3F4F6', borderColor: '#9CA3AF' }]}
-                onPress={() => handleSimulateEvent('NEIGHBOR')}
+                onPress={handleSimulateSoundbox}
                 disabled={loading}
               >
-                <Ionicons name="volume-mute" size={16} color="#4B5563" style={{ marginRight: 4 }} />
-                <Text style={[styles.simButtonText, { color: '#4B5563' }]}>Neighbor (₹50)</Text>
+                {simulatingKind === 'SOUNDBOX' ? (
+                  <ActivityIndicator size="small" color="#4B5563" style={{ marginRight: 4 }} />
+                ) : (
+                  <Ionicons name="volume-mute" size={16} color="#4B5563" style={{ marginRight: 4 }} />
+                )}
+                <Text style={[styles.simButtonText, { color: '#4B5563' }]}>Soundbox ₹80</Text>
               </TouchableOpacity>
             </View>
 
@@ -236,43 +273,51 @@ export const UpiEventsModal: React.FC<Props> = ({
 
             {/* Activity Feed */}
             <Text style={styles.sectionHeading}>Today's Online Events</Text>
-            {feed.map(item => (
-              <View key={item.id} style={styles.feedCard}>
-                <View style={styles.feedTopRow}>
-                  <View style={[
-                    styles.statusBadge,
-                    item.status === 'CONFIRMED' && styles.badgeConfirmed,
-                    item.status === 'ISOLATED' && styles.badgeIsolated,
-                    item.status === 'QUARANTINED' && styles.badgeQuarantined
-                  ]}>
-                    <Text style={[
-                      styles.badgeLabel,
-                      item.status === 'CONFIRMED' && styles.badgeLabelConfirmed,
-                      item.status === 'ISOLATED' && styles.badgeLabelIsolated,
-                      item.status === 'QUARANTINED' && styles.badgeLabelQuarantined
+            {feed.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="receipt-outline" size={32} color="#D1D5DB" />
+                <Text style={styles.emptyStateText}>No UPI events yet today</Text>
+                <Text style={styles.emptyStateSub}>Tap a button above to simulate an event</Text>
+              </View>
+            ) : (
+              feed.map(item => (
+                <View key={item.id} style={styles.feedCard}>
+                  <View style={styles.feedTopRow}>
+                    <View style={[
+                      styles.statusBadge,
+                      item.status === 'CONFIRMED' && styles.badgeConfirmed,
+                      item.status === 'ISOLATED' && styles.badgeIsolated,
+                      item.status === 'QUARANTINED' && styles.badgeQuarantined
                     ]}>
-                      {item.badgeText}
+                      <Text style={[
+                        styles.badgeLabel,
+                        item.status === 'CONFIRMED' && styles.badgeLabelConfirmed,
+                        item.status === 'ISOLATED' && styles.badgeLabelIsolated,
+                        item.status === 'QUARANTINED' && styles.badgeLabelQuarantined
+                      ]}>
+                        {item.badgeText}
+                      </Text>
+                    </View>
+                    <Text style={styles.feedTime}>{item.time}</Text>
+                  </View>
+
+                  <View style={styles.feedMainRow}>
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <Text style={styles.feedTitle}>{item.title}</Text>
+                      <Text style={styles.feedSub}>{item.subtitle}</Text>
+                    </View>
+                    <Text style={[
+                      styles.feedAmount,
+                      item.status === 'CONFIRMED' && styles.amountConfirmed,
+                      item.status === 'ISOLATED' && styles.amountIsolated,
+                      item.status === 'QUARANTINED' && styles.amountQuarantined
+                    ]}>
+                      {item.status === 'QUARANTINED' ? 'Ignored' : `+₹${item.amount.toLocaleString('en-IN')}`}
                     </Text>
                   </View>
-                  <Text style={styles.feedTime}>{item.time}</Text>
                 </View>
-
-                <View style={styles.feedMainRow}>
-                  <View style={{ flex: 1, marginRight: 10 }}>
-                    <Text style={styles.feedTitle}>{item.title}</Text>
-                    <Text style={styles.feedSub}>{item.subtitle}</Text>
-                  </View>
-                  <Text style={[
-                    styles.feedAmount,
-                    item.status === 'CONFIRMED' && styles.amountConfirmed,
-                    item.status === 'ISOLATED' && styles.amountIsolated,
-                    item.status === 'QUARANTINED' && styles.amountQuarantined
-                  ]}>
-                    {item.status === 'QUARANTINED' ? 'Ignored' : `+₹${item.amount.toLocaleString('en-IN')}`}
-                  </Text>
-                </View>
-              </View>
-            ))}
+              ))
+            )}
 
             <TouchableOpacity style={styles.closeFullBtn} onPress={onClose}>
               <Text style={styles.closeFullBtnText}>Done</Text>
@@ -378,6 +423,38 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#073B3A',
+  },
+  inlinePromptBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1FFE5',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#DDECE7',
+  },
+  inlinePromptText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#073B3A',
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    marginTop: 10,
+  },
+  emptyStateSub: {
+    fontSize: 11,
+    color: '#D1D5DB',
+    marginTop: 4,
   },
   feedCard: {
     backgroundColor: '#FFFFFF',

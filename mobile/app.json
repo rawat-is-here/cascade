@@ -10,12 +10,33 @@
       "backgroundColor": "#0f172a"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Cascade requires camera access to scan and OCR wholesale mandi slips."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0f172a"
-      }
-    }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Cascade to access your camera to scan wholesale mandi slips."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Cascade to access your photos to select wholesale mandi slips."
+        }
+      ]
+    ]
   }
 }

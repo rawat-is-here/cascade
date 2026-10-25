@@ -19,6 +19,9 @@ import { MandiOcrModal } from './components/MandiOcrModal';
 import { AudioStreamModal } from './components/AudioStreamModal';
 import { VoiceOrderModal } from './components/VoiceOrderModal';
 import { BlendedPrompt, PromptInfo } from './components/BlendedPrompt';
+import { STTConfirmationModal } from './components/STTConfirmationModal';
+import { CreditBookModal } from './components/CreditBookModal';
+import { RecipeModal } from './components/RecipeModal';
 
 interface Transaction {
   id: string;
@@ -110,9 +113,45 @@ export default function App() {
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [showEOD, setShowEOD] = useState(false);
   const [showLoss, setShowLoss] = useState(false);
+  const [showCreditBook, setShowCreditBook] = useState(false);
+  const [showRecipes, setShowRecipes] = useState(false);
+  const [showSTTConfirm, setShowSTTConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<'HOME' | 'TRANSFERS' | 'ANALYTICS'>('HOME');
 
+  // Live Profit Bounds (True Accrual — replaces static hardcoded interval)
+  const [profitBounds, setProfitBounds] = useState<{ lower: number; upper: number; estimate: number; margin: number } | null>(null);
+  const [profitLoading, setProfitLoading] = useState(false);
+  const [activeWholesaleBasis, setActiveWholesaleBasis] = useState<{ totalCost: number; itemsCount: number; supplier: string }>({ totalCost: 1720, itemsCount: 3, supplier: "Azadpur Mandi" });
+
+  useEffect(() => {
+    fetchProfitBounds();
+  }, [liveCashInDrawer]);
+
+  const fetchProfitBounds = async () => {
+    setProfitLoading(true);
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/vendor/profit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cash: liveCashInDrawer })
+      });
+      const data = await res.json();
+      if (data.ok && data.data) {
+        const d = data.data;
+        setProfitBounds({
+          lower: d.lower ?? d.lowerBound ?? Math.round(netOperatingBalance * 0.35),
+          upper: d.upper ?? d.upperBound ?? Math.round(netOperatingBalance * 0.44),
+          estimate: d.estimate ?? d.bestEstimate ?? Math.round(netOperatingBalance * 0.38),
+          margin: d.marginPct ?? d.margin ?? 38
+        });
+      }
+    } catch {
+      // Keep null
+    } finally {
+      setProfitLoading(false);
+    }
+  };
   // Real-time Daytime Listening & Confidence States
   const [isListening, setIsListening] = useState(true);
   const [latestHeardDialogue, setLatestHeardDialogue] = useState('Customer: 1 kilo tamatar do → Stall: ₹30');
@@ -120,6 +159,7 @@ export default function App() {
     item: string;
     amount: number;
     text: string;
+    confidence?: number;
   } | null>(null);
 
   // Modern Blended Prompt / In-App Notification System
@@ -327,19 +367,31 @@ export default function App() {
             </View>
           </View>
 
-          {/* CARD 2: KURO CARD (ACTUAL PROFIT) */}
+          {/* CARD 2: KURO CARD (ACTUAL PROFIT — LIVE API) */}
           <View style={styles.kuroCard}>
             <View style={styles.kuroTopRow}>
               <Text style={styles.kuroTitle}>Actual Profit</Text>
             </View>
 
             <View style={styles.kuroWavePineBottom}>
-              <Text style={styles.kuroAmount}>
-                ₹{Math.max(0, Math.round(netOperatingBalance * 0.38)).toLocaleString('en-IN')} – ₹{Math.max(0, Math.round(netOperatingBalance * 0.44)).toLocaleString('en-IN')}
-              </Text>
+              {profitLoading ? (
+                <Text style={styles.kuroAmount}>Calculating...</Text>
+              ) : profitBounds ? (
+                <Text style={styles.kuroAmount}>
+                  ₹{profitBounds.lower.toLocaleString('en-IN')} – ₹{profitBounds.upper.toLocaleString('en-IN')}
+                </Text>
+              ) : (
+                <Text style={styles.kuroAmount}>
+                  ₹{Math.max(0, Math.round(netOperatingBalance * 0.35)).toLocaleString('en-IN')} – ₹{Math.max(0, Math.round(netOperatingBalance * 0.44)).toLocaleString('en-IN')}
+                </Text>
+              )}
               <View style={styles.kuroFooterRow}>
-                <Text style={styles.kuroCardNumber}>Net Margin ~38%</Text>
-                <Text style={styles.kuroVisaBadge}>CRDT DAG</Text>
+                <Text style={styles.kuroCardNumber}>
+                  {profitBounds ? `Net Margin ~${profitBounds.margin}%` : 'Net Margin ~38%'}
+                </Text>
+                <TouchableOpacity onPress={fetchProfitBounds}>
+                  <Text style={styles.kuroVisaBadge}>↻ Recalc</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -692,6 +744,42 @@ export default function App() {
               <Text style={styles.actionGridSub}>Helper mesh</Text>
             </TouchableOpacity>
           </View>
+
+          {/* ROW 3: CREDIT BOOK | RECIPES | STT GATE */}
+          <View style={styles.actionsGridRow}>
+            <TouchableOpacity
+              style={styles.actionGridItem}
+              onPress={() => setShowCreditBook(true)}
+            >
+              <View style={styles.limeIconBox}>
+                <Ionicons name="book-outline" size={20} color="#073B3A" />
+              </View>
+              <Text style={styles.actionGridTitle}>Udhar Book</Text>
+              <Text style={styles.actionGridSub}>Credit entries</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionGridItem}
+              onPress={() => setShowRecipes(true)}
+            >
+              <View style={styles.limeIconBox}>
+                <Ionicons name="restaurant-outline" size={20} color="#073B3A" />
+              </View>
+              <Text style={styles.actionGridTitle}>Recipes</Text>
+              <Text style={styles.actionGridSub}>Portion deduct</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionGridItem}
+              onPress={() => setShowSTTConfirm(true)}
+            >
+              <View style={styles.limeIconBox}>
+                <Ionicons name="shield-checkmark-outline" size={20} color="#073B3A" />
+              </View>
+              <Text style={styles.actionGridTitle}>STT Gate</Text>
+              <Text style={styles.actionGridSub}>&lt; 0.90 check</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <Text style={styles.sectionTitle}>System Security</Text>
@@ -975,6 +1063,7 @@ export default function App() {
         onClose={() => setShowMandiOcr(false)}
         apiBaseUrl={getApiBaseUrl()}
         onSlipIngested={(summary) => {
+          setActiveWholesaleBasis(summary);
           const cost = summary.totalCost;
           setTransactions(prev => [
             {
@@ -1018,6 +1107,89 @@ export default function App() {
         onClose={() => setShowVoiceModal(false)}
         onProcessOrder={handleProcessVoiceOrder}
         loading={loading}
+      />
+
+      <STTConfirmationModal
+        visible={showSTTConfirm || confirmationPending !== null}
+        pending={confirmationPending ? {
+          item: confirmationPending.item,
+          amount: confirmationPending.amount,
+          text: confirmationPending.text,
+          confidence: confirmationPending.confidence ?? 0.74
+        } : (showSTTConfirm ? {
+          item: "Tamatar (1kg)",
+          amount: 30,
+          text: "Bhaiya ek kilo tamatar dena",
+          confidence: 0.74
+        } : null)}
+        onConfirm={() => {
+          if (confirmationPending) {
+            const amt = confirmationPending.amount;
+            const newTx = {
+              id: `confirm-${Date.now()}`,
+              title: `${confirmationPending.item} (STT Confirmed)`,
+              category: "Voice Sale",
+              amount: amt,
+              isCredit: true,
+              time: "Just now"
+            };
+            setTransactions(prev => [newTx, ...prev]);
+            setLatestHeardDialogue(`Confirmed: ${confirmationPending.item} → ₹${amt}`);
+            setConfirmationPending(null);
+          }
+          setShowSTTConfirm(false);
+          showPrompt({
+            badge: "STT Confirmed",
+            title: "Low-Confidence Sale Accepted",
+            description: "Vocal order verified by stall keeper and posted to ledger.",
+            type: "success",
+            icon: "checkmark-circle-outline"
+          });
+        }}
+        onReRecord={() => {
+          setConfirmationPending(null);
+          setShowSTTConfirm(false);
+          setShowVoiceModal(true);
+        }}
+        onManualEntry={(text) => {
+          setConfirmationPending(null);
+          setShowSTTConfirm(false);
+          handleProcessVoiceOrder(text);
+        }}
+        onDismiss={() => {
+          setConfirmationPending(null);
+          setShowSTTConfirm(false);
+        }}
+      />
+
+      <CreditBookModal
+        visible={showCreditBook}
+        onClose={() => setShowCreditBook(false)}
+        apiBaseUrl={getApiBaseUrl()}
+        onCreditAdded={(customerName, amount) => {
+          showPrompt({
+            badge: "Udhar Added",
+            title: `₹${amount} recorded for ${customerName}`,
+            description: "Customer credit saved to CRDT ledger.",
+            type: "info",
+            icon: "book-outline"
+          });
+        }}
+      />
+
+      <RecipeModal
+        visible={showRecipes}
+        onClose={() => setShowRecipes(false)}
+        apiBaseUrl={getApiBaseUrl()}
+        onRecipeApplied={(recipeName, servings) => {
+          showPrompt({
+            badge: "Recipe Deducted",
+            title: `${servings}x ${recipeName} applied`,
+            description: "Calculated portion ingredients deducted from inventory.",
+            type: "success",
+            icon: "restaurant-outline"
+          });
+        }}
       />
     </SafeAreaView>
   );

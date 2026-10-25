@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
-  ActivityIndicator
+  ActivityIndicator,
+  Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -58,6 +59,36 @@ interface Props {
   apiBaseUrl?: string;
   onReconciliationComplete?: (result: EODReconciliationResult) => void;
 }
+
+// Animated skeleton box for loading state
+const SkeletonBox: React.FC<{ width?: number | string; height?: number; borderRadius?: number; style?: any }> = ({
+  width = '100%',
+  height = 18,
+  borderRadius = 8,
+  style
+}) => {
+  const opacity = React.useRef(new Animated.Value(0.4)).current;
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.4, duration: 700, useNativeDriver: true })
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        { width, height, borderRadius, backgroundColor: '#E5E7EB', opacity },
+        style
+      ]}
+    />
+  );
+};
 
 export const EODReconciliationModal: React.FC<Props> = ({
   visible,
@@ -111,6 +142,14 @@ export const EODReconciliationModal: React.FC<Props> = ({
           const profit = rep.netGrossProfit ?? Math.round(targetCashDelta * 0.38);
           const margin = rep.profitMarginPercent ?? 38;
 
+          // Build itemsSoldSummary from server data — no hardcoded items
+          const rawItems = rep.itemsSoldSummary ?? rep.resolvedTransactions ?? [];
+          const itemsSoldSummary = rawItems.map((t: any) => ({
+            name: t.name || t.item || 'Item',
+            quantity: t.quantity || `${t.qty || 0} kg sold`,
+            avgRate: t.avgRate || (t.unitRate ? `Avg ₹${t.unitRate}/kg` : 'Rate N/A')
+          }));
+
           const resObj: EODReconciliationResult = {
             targetCashDelta,
             totalResolvedCash: rep.totalRevenue || targetCashDelta,
@@ -124,10 +163,7 @@ export const EODReconciliationModal: React.FC<Props> = ({
             takeHomeProfit: profit,
             profitMarginPercent: margin,
             wholesaleCogs: rep.wholesaleCogsBurned || Math.round(targetCashDelta * 0.62),
-            itemsSoldSummary: [
-              { name: 'Tomatoes', quantity: '18.5 kg sold', avgRate: 'Average price: ₹30/kg' },
-              { name: 'Potatoes', quantity: '42.0 kg sold', avgRate: 'Average price: ₹25/kg' }
-            ]
+            itemsSoldSummary
           };
 
           setResult(resObj);
@@ -175,6 +211,14 @@ export const EODReconciliationModal: React.FC<Props> = ({
     setResult(resFallback);
     if (onReconciliationComplete) onReconciliationComplete(resFallback);
     setLoading(false);
+  };
+
+  // Determine discrepancy color
+  const getDiscrepancyColor = (disc: number): string => {
+    const abs = Math.abs(disc);
+    if (abs === 0) return '#073B3A';      // green — perfect
+    if (abs < 50) return '#0284C7';       // blue — small
+    return '#DC2626';                      // red — large
   };
 
   return (
@@ -259,12 +303,21 @@ export const EODReconciliationModal: React.FC<Props> = ({
               )}
             </TouchableOpacity>
 
+            {/* Loading skeleton */}
+            {loading && (
+              <View style={styles.skeletonContainer}>
+                <SkeletonBox height={22} borderRadius={10} style={{ marginBottom: 10 }} />
+                <SkeletonBox height={18} borderRadius={8} width="70%" style={{ marginBottom: 10 }} />
+                <SkeletonBox height={18} borderRadius={8} width="85%" />
+              </View>
+            )}
+
             {/* Settlement Report */}
-            {result && (
+            {result && !loading && (
               <View style={styles.resultContainer}>
                 {/* 1. Real Take Home Profit */}
                 <View style={styles.profitBanner}>
-                  <Text style={styles.profitBannerLabel}>TODAY’S REAL TAKE-HOME PROFIT</Text>
+                  <Text style={styles.profitBannerLabel}>TODAY'S REAL TAKE-HOME PROFIT</Text>
                   <View style={styles.profitRow}>
                     <Text style={styles.profitAmount}>
                       ₹{(result.takeHomeProfit ?? 1340).toLocaleString('en-IN')}.00
@@ -278,20 +331,23 @@ export const EODReconciliationModal: React.FC<Props> = ({
                   </Text>
                 </View>
 
-                {/* 2. Cash Match Status */}
+                {/* 2. Cash Match Status — real drawerDiscrepancy with color */}
                 <Text style={styles.sectionHeading}>Cash Match Status</Text>
                 {Math.abs(result.drawerDiscrepancy) === 0 ? (
                   <View style={[styles.statusBox, styles.statusBoxBalanced]}>
                     <Ionicons name="checkmark-circle" size={22} color="#073B3A" style={{ marginRight: 8 }} />
                     <Text style={[styles.statusBoxText, { color: '#073B3A' }]}>
-                      <Text style={{ fontWeight: '800' }}>Perfect Match!</Text> Every single rupee in your drawer matches today’s sales.
+                      <Text style={{ fontWeight: '800' }}>Perfect Match!</Text> Every single rupee in your drawer matches today's sales.
                     </Text>
                   </View>
-                ) : Math.abs(result.drawerDiscrepancy) <= 20 ? (
+                ) : Math.abs(result.drawerDiscrepancy) < 50 ? (
                   <View style={[styles.statusBox, styles.statusBoxWarning]}>
                     <Ionicons name="information-circle" size={22} color="#0284C7" style={{ marginRight: 8 }} />
                     <Text style={[styles.statusBoxText, { color: '#0284C7' }]}>
-                      <Text style={{ fontWeight: '800' }}>₹{Math.abs(result.drawerDiscrepancy)} difference</Text> — likely street coin rounding or free chilies.
+                      <Text style={{ fontWeight: '800', color: getDiscrepancyColor(result.drawerDiscrepancy) }}>
+                        ₹{Math.abs(result.drawerDiscrepancy)} difference
+                      </Text>
+                      {' '}— likely street coin rounding or free chilies.
                     </Text>
                   </View>
                 ) : (
@@ -303,17 +359,24 @@ export const EODReconciliationModal: React.FC<Props> = ({
                   </View>
                 )}
 
-                {/* 3. Items Sold Summary */}
+                {/* 3. Items Sold Summary — real server data */}
                 <Text style={styles.sectionHeading}>Items Sold Summary</Text>
-                {(result.itemsSoldSummary || []).map((item, idx) => (
-                  <View key={idx} style={styles.summaryItemRow}>
-                    <View style={styles.summaryDot} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.summaryItemName}>{item.name}: <Text style={{ fontWeight: '800' }}>{item.quantity}</Text></Text>
-                      <Text style={styles.summaryItemRate}>{item.avgRate}</Text>
+                {(result.itemsSoldSummary && result.itemsSoldSummary.length > 0) ? (
+                  result.itemsSoldSummary.map((item, idx) => (
+                    <View key={idx} style={styles.summaryItemRow}>
+                      <View style={styles.summaryDot} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.summaryItemName}>{item.name}: <Text style={{ fontWeight: '800' }}>{item.quantity}</Text></Text>
+                        <Text style={styles.summaryItemRate}>{item.avgRate}</Text>
+                      </View>
                     </View>
+                  ))
+                ) : (
+                  <View style={styles.emptyItemsBox}>
+                    <Ionicons name="document-outline" size={20} color="#9CA3AF" style={{ marginBottom: 6 }} />
+                    <Text style={styles.emptyItemsText}>No itemized data from server</Text>
                   </View>
-                ))}
+                )}
 
                 <TouchableOpacity style={styles.closeFullBtn} onPress={onClose}>
                   <Text style={styles.closeFullBtnText}>Done & Save Register</Text>
@@ -431,6 +494,14 @@ const styles = StyleSheet.create({
     color: '#073B3A',
     letterSpacing: -0.2,
   },
+  skeletonContainer: {
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
   resultContainer: {
     marginTop: 4,
   },
@@ -532,6 +603,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6B7280',
     marginTop: 2,
+  },
+  emptyItemsBox: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 8,
+  },
+  emptyItemsText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '600',
   },
   closeFullBtn: {
     backgroundColor: '#073B3A',
