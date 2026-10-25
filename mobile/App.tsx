@@ -17,6 +17,7 @@ import { EODReconciliationModal } from './components/EODReconciliationModal';
 import { LossModal } from './components/LossModal';
 import { MandiOcrModal } from './components/MandiOcrModal';
 import { AudioStreamModal } from './components/AudioStreamModal';
+import { VoiceOrderModal } from './components/VoiceOrderModal';
 import { BlendedPrompt, PromptInfo } from './components/BlendedPrompt';
 
 interface Transaction {
@@ -69,13 +70,8 @@ export default function App() {
   // Baseline opening cash float & Dynamic Financial State
   const openingFloat = 500;
 
-  // Transactions (Single Source of Truth)
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    { id: '1', title: 'Tamatar (3kg) + Sharma Ji', category: 'Vegetable Mandi', amount: 180, isCredit: true, time: '12:42 PM' },
-    { id: '2', title: 'Paytm Soundbox UPI Chime', category: 'Digital UPI', amount: 140, isCredit: true, time: '12:38 PM' },
-    { id: '3', title: 'Kerosene & Stall Fuel', category: 'Stall Supplies', amount: 60, isCredit: false, time: '11:15 AM' },
-    { id: '4', title: 'Poha Plates Sale (x7)', category: 'Food Counter', amount: 140, isCredit: true, time: '10:05 AM' }
-  ]);
+  // Transactions (Single Source of Truth - 100% Dynamic)
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   // Dynamic calculations derived from live transactions
   const totalSales = useMemo(() => {
@@ -106,6 +102,7 @@ export default function App() {
   const [activeSabotage, setActiveSabotage] = useState<'CLEAN' | 'NOISE' | 'CLOCK' | 'AIRGAP'>('CLEAN');
 
   // Modals & Navigation
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showAudioStreamModal, setShowAudioStreamModal] = useState(false);
   const [showMandiOcr, setShowMandiOcr] = useState(false);
   const [showMorningStock, setShowMorningStock] = useState(false);
@@ -131,112 +128,99 @@ export default function App() {
     setActivePrompt({ ...info });
   };
 
-  // Voice Utterance Handler
-  const handleSimulateUtterance = async (scenario: 'MULTI_POST' | 'NEGOTIATION' | 'WALKAWAY' | 'FREEBIE') => {
+  // Dynamic Real-time Voice Order Handler (ZERO Hardcoding)
+  const handleProcessVoiceOrder = async (spokenPhrase: string) => {
+    if (!spokenPhrase || !spokenPhrase.trim()) return;
     setLoading(true);
-    let spoken = '';
-    if (scenario === 'MULTI_POST') spoken = 'Bhai 3 kilo tamatar liya 180 mein… Sharma ji ka 40 jama kar, aur 7 plate poha de.';
-    else if (scenario === 'NEGOTIATION') spoken = 'Customer: 40 me do bhaiya... Vendor: Nahi 50 lagega... Vendor: Chalo 45 me le jao!';
-    else if (scenario === 'WALKAWAY') spoken = 'Customer: Rehne do bhaiya bahut mehenga hai, nahi lena!';
-    else if (scenario === 'FREEBIE') spoken = 'Customer: Thoda dhaniya mirchi upar se daal do na';
+    const textToSend = spokenPhrase.trim();
 
     try {
       const res = await fetch(`${getApiBaseUrl()}/vendor/utterance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: spoken, clock: Date.now() })
+        body: JSON.stringify({ text: textToSend, clock: Date.now() })
       });
       const data = await res.json();
 
-      if (scenario === 'WALKAWAY') {
+      setLatestHeardDialogue(textToSend);
+
+      if (data.isWalkaway) {
         showPrompt({
           badge: 'Customer Walkaway',
-          title: 'No Sale Recorded',
-          description: 'The customer left without buying anything. Zero rupees added.',
+          title: 'No Sale Recorded (₹0)',
+          description: 'The customer left without buying. No fake sale was added.',
           type: 'info',
           icon: 'walk-outline'
         });
-      } else if (scenario === 'FREEBIE') {
+      } else if (data.isFreebie) {
         showPrompt({
           badge: 'Freebie Request',
-          title: 'Customer Freebie Noted',
-          description: 'Recorded extra coriander/chili. Logged in inventory without inflating sales.',
+          title: 'Customer Freebie Noted (₹0)',
+          description: `Garnish/extra item (${data.title}) recorded in inventory.`,
           type: 'info',
           icon: 'gift-outline'
         });
-      } else {
-        const amt = scenario === 'NEGOTIATION' ? 45 : 180;
+      } else if (data.isInquiry) {
+        showPrompt({
+          badge: 'Price Inquiry',
+          title: 'Price Inquiry Heard (₹0)',
+          description: `Customer asked: "${textToSend}". No sale booked until quote agreed.`,
+          type: 'info',
+          icon: 'help-circle-outline'
+        });
+      } else if (data.amount > 0) {
+        const amt = Number(data.amount);
         const newTx: Transaction = {
-          id: `tx-${Date.now()}`,
-          title: scenario === 'NEGOTIATION' ? 'Sale agreed at ₹45' : 'New voice sale',
-          category: 'Voice entry',
+          id: `tx-voice-${Date.now()}`,
+          title: data.title || `Voice Sale (+₹${amt})`,
+          category: 'Voice Sale',
           amount: amt,
           isCredit: true,
-          time: 'Just now'
+          time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
         };
         setTransactions(prev => [newTx, ...prev]);
         showPrompt({
-          badge: 'Voice Sale',
-          title: scenario === 'NEGOTIATION' ? 'Agreed at ₹45' : 'Voice Sale Recorded: +₹180',
-          description: 'Transaction recorded and added to today’s stall drawer.',
+          badge: 'Dynamic Voice Sale',
+          title: `${data.title || 'Sale Recorded'}: +₹${amt.toLocaleString('en-IN')}`,
+          description: 'Dynamically parsed and posted to double-entry ledger.',
           type: 'success',
           icon: 'mic-outline'
+        });
+      } else {
+        showPrompt({
+          badge: 'Voice Processed',
+          title: 'Utterance Received',
+          description: textToSend,
+          type: 'info',
+          icon: 'chatbubble-outline'
         });
       }
     } catch {
-      // Offline fallback
-      if (scenario === 'WALKAWAY') {
-        showPrompt({
-          badge: 'Customer Walkaway',
-          title: 'No Sale Recorded',
-          description: 'The customer left without buying anything. Zero rupees added.',
-          type: 'info',
-          icon: 'walk-outline'
-        });
-      } else if (scenario === 'FREEBIE') {
-        showPrompt({
-          badge: 'Freebie Request',
-          title: 'Customer Freebie Noted',
-          description: 'Recorded extra coriander/chili. Logged in inventory without inflating sales.',
-          type: 'info',
-          icon: 'gift-outline'
-        });
-      } else {
-        const amt = scenario === 'NEGOTIATION' ? 45 : 180;
-        const newTx: Transaction = {
-          id: `tx-off-${Date.now()}`,
-          title: scenario === 'NEGOTIATION' ? 'Sale agreed at ₹45' : 'New voice sale',
-          category: 'Voice entry',
-          amount: amt,
-          isCredit: true,
-          time: 'Just now'
-        };
-        setTransactions(prev => [newTx, ...prev]);
-        showPrompt({
-          badge: 'Voice Sale',
-          title: scenario === 'NEGOTIATION' ? 'Agreed at ₹45' : 'Voice Sale Recorded: +₹180',
-          description: 'Transaction recorded offline into stall register.',
-          type: 'success',
-          icon: 'mic-outline'
-        });
-      }
+      showPrompt({
+        badge: 'Offline Note',
+        title: 'Heard Spoken Order',
+        description: `Logged: "${textToSend}"`,
+        type: 'info',
+        icon: 'mic-outline'
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const handleSimulateSoundbox = () => {
+  const handleSimulateSoundbox = (amount = 50) => {
     const soundboxTx: Transaction = {
       id: `tx-soundbox-${Date.now()}`,
-      title: 'Paytm Soundbox UPI: ₹140',
-      category: 'UPI payment',
-      amount: 140,
+      title: `Paytm Soundbox UPI: ₹${amount}`,
+      category: 'Soundbox Verified',
+      amount,
       isCredit: true,
-      time: 'Just now'
+      time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
     };
     setTransactions(prev => [soundboxTx, ...prev]);
     showPrompt({
       badge: 'Paytm Soundbox',
-      title: 'Payment Received: +₹140.00',
+      title: `Payment Received: +₹${amount.toFixed(2)}`,
       description: 'Soundbox audio chime verified and credited to today’s sales.',
       type: 'success',
       icon: 'qr-code-outline'
@@ -281,17 +265,12 @@ export default function App() {
   };
 
   const handleReset = () => {
-    setTransactions([
-      { id: '1', title: 'Tamatar (3kg) + Sharma Ji', category: 'Vegetable Mandi', amount: 180, isCredit: true, time: '12:42 PM' },
-      { id: '2', title: 'Paytm Soundbox UPI Chime', category: 'Digital UPI', amount: 140, isCredit: true, time: '12:38 PM' },
-      { id: '3', title: 'Kerosene & Stall Fuel', category: 'Stall Supplies', amount: 60, isCredit: false, time: '11:15 AM' },
-      { id: '4', title: 'Poha Plates Sale (x7)', category: 'Food Counter', amount: 140, isCredit: true, time: '10:05 AM' }
-    ]);
+    setTransactions([]);
     setActiveSabotage('CLEAN');
     showPrompt({
-      badge: 'Stall Reset',
-      title: 'Sample Baseline Restored',
-      description: `Today’s register reset to morning opening float ₹${openingFloat}.`,
+      badge: 'Register Reset',
+      title: 'Day Baseline Cleared',
+      description: `Today’s register reset to opening float ₹${openingFloat}. All entries cleared.`,
       type: 'info',
       icon: 'refresh-outline'
     });
@@ -656,14 +635,14 @@ export default function App() {
 
             <TouchableOpacity
               style={styles.actionGridItem}
-              onPress={() => handleSimulateUtterance('MULTI_POST')}
+              onPress={() => setShowVoiceModal(true)}
               disabled={loading}
             >
               <View style={styles.limeIconBox}>
                 <Ionicons name="mic-outline" size={20} color="#073B3A" />
               </View>
-              <Text style={styles.actionGridTitle}>{loading ? 'Adding...' : 'Voice Sale'}</Text>
-              <Text style={styles.actionGridSub}>Speak order</Text>
+              <Text style={styles.actionGridTitle}>Voice Sale</Text>
+              <Text style={styles.actionGridSub}>Speak or type</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -805,31 +784,25 @@ export default function App() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Voice Scenarios</Text>
+        <Text style={styles.sectionTitle}>Real Indic Voice Tests</Text>
         <View style={styles.scenariosFlow}>
-          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleSimulateUtterance('MULTI_POST')}>
-            <Text style={styles.scenarioPillText}>Add mixed sale</Text>
+          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleProcessVoiceOrder('4kg aloo 80 rupaye me de do')}>
+            <Text style={styles.scenarioPillText}>🥔 4kg aloo ₹80</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleSimulateUtterance('NEGOTIATION')}>
-            <Text style={styles.scenarioPillText}>Set price at ₹45</Text>
+          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleProcessVoiceOrder('50 rupaye ka tamatar pack kar do')}>
+            <Text style={styles.scenarioPillText}>🍅 ₹50 tamatar</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleSimulateUtterance('WALKAWAY')}>
-            <Text style={styles.scenarioPillText}>Customer left</Text>
+          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleProcessVoiceOrder('2 plate poha 40 rupaye')}>
+            <Text style={styles.scenarioPillText}>🍛 2 plate poha ₹40</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleSimulateUtterance('FREEBIE')}>
-            <Text style={styles.scenarioPillText}>Add a free item</Text>
+          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleProcessVoiceOrder('Rehne do bhaiya bahut mehenga hai, nahi lena')}>
+            <Text style={styles.scenarioPillText}>🚶 Walkaway (₹0)</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.scenarioPill, { backgroundColor: '#F1FFE5', borderColor: '#073B3A', borderWidth: 1 }]}
-            onPress={() => {
-              setConfirmationPending({
-                item: '1 kg Tomatoes',
-                amount: 30,
-                text: '...ek kilo tamatar... (loud bus horn)'
-              });
-            }}
-          >
-            <Text style={[styles.scenarioPillText, { fontWeight: '800' }]}>👂 Muffled voice test</Text>
+          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleProcessVoiceOrder('Thoda dhaniya mirchi upar se daal do na')}>
+            <Text style={styles.scenarioPillText}>🌿 Freebie (₹0)</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleProcessVoiceOrder('4kg aloo kitne ke hue')}>
+            <Text style={styles.scenarioPillText}>❓ Inquiry (₹0)</Text>
           </TouchableOpacity>
         </View>
 
@@ -868,7 +841,7 @@ export default function App() {
 
           <TouchableOpacity
             style={styles.dockMicButton}
-            onPress={() => handleSimulateUtterance('MULTI_POST')}
+            onPress={() => setShowVoiceModal(true)}
             disabled={loading}
             accessibilityLabel="Add a sale by voice"
           >
@@ -1038,6 +1011,13 @@ export default function App() {
             icon: 'mic-outline'
           });
         }}
+      />
+
+      <VoiceOrderModal
+        visible={showVoiceModal}
+        onClose={() => setShowVoiceModal(false)}
+        onProcessOrder={handleProcessVoiceOrder}
+        loading={loading}
       />
     </SafeAreaView>
   );

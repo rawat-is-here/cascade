@@ -5,6 +5,7 @@ import { WholesaleCostManager, type WholesaleItemPurchase } from '../../../core/
 import { UPICrossValidator } from '../../../core/fusion/upi_cross_validator';
 import { QwenEODBatchInterpreter } from '../../../core/slm/qwen_interpreter';
 import { ConservedDoubleEntryCRDT } from '../../../core/crdt/double_entry_crdt';
+import { IndicNumericLexer } from '../../../core/linguistics/indic_lexer';
 import type { RawTranscriptRecord } from '../../../core/perception/unified_audio_stream';
 import type { ParsedUPINotification } from '../../../shared/types';
 import { initializeDatabase } from '../db/database';
@@ -339,12 +340,99 @@ const legacyFusion = new FusionBuffer();
 const legacyProfit = new ProfitEngine();
 
 vendorRouter.post('/utterance', (req, res) => {
-  const { text, clock } = req.body;
-  const evt = legacyParser.parse(text || '', clock || 1);
-  const node = legacyLedger.addEvent(evt);
-  const balances = legacyLedger.getBalances();
+  try {
+    const { text, clock } = req.body;
+    const cleanText = String(text || '').trim();
+    if (!cleanText) {
+      return res.status(400).json({ ok: false, error: 'Text utterance is required' });
+    }
 
-  res.json({ ok: true, event: evt, node, balances });
+    // 1. Check for Walkaway / Abandonment ("rehne do", "nahi lena", "aage se lenge")
+    const isWalkaway = /(?:rehne\s*do|aage\s*se|nahi\s*chahiye|bohot\s*mehenga|chhod\s*do|nahi\s*lena)/i.test(cleanText);
+
+    // 2. Parse using the Indic Numeric Lexer (handles slang, commodities, metric fractions)
+    const parsed = IndicNumericLexer.parse(cleanText);
+
+    // 3. Check for Inquiry without agreed rate ("kitne ka diya", "kya bhav hai")
+    const isInquiry = /(?:kitne\s*ka|kitne\s*ke|kya\s*bhav|bhav\s*batao|rate\s*batao|kaise\s*diya)/i.test(cleanText) &&
+                      !/(?:kar\s*do|de\s*do|pack|baandh|le\s*jao|le\s*lo)/i.test(cleanText);
+
+    // 4. Dynamically derive transaction amount (ZERO hardcoding)
+    let amount = 0;
+    if (!isWalkaway && !isInquiry && !parsed.isFreebie) {
+      if (parsed.price !== undefined && parsed.price > 0) {
+        if (parsed.isValueDriven) {
+          amount = parsed.price;
+        } else if (parsed.quantity && parsed.quantity > 0) {
+          if (/(?:rupaye\s*kilo|kilo\s*ke|par\s*kg|rupaye\s*par\s*kilo)/i.test(cleanText)) {
+            amount = Math.round(parsed.price * parsed.quantity * 100) / 100;
+          } else {
+            amount = parsed.price;
+          }
+        } else {
+          amount = parsed.price;
+        }
+      } else if (parsed.quantity && parsed.item) {
+        // Fallback default rate if customer asked for item + quantity without stating price
+        // e.g. "2 plate poha dena" -> default rate for poha is 20 -> 40
+        const defaultRates: Record<string, number> = {
+          poha: 20, chai: 10, samosa: 15, aloo: 20, tamatar: 40, pyaaz: 30
+        };
+        const r = defaultRates[parsed.item] || 20;
+        amount = Math.round(r * parsed.quantity * 100) / 100;
+      }
+    }
+
+    const itemLabel = parsed.itemNormalized
+      ? (parsed.itemNormalized.charAt(0).toUpperCase() + parsed.itemNormalized.slice(1))
+      : (parsed.item ? (parsed.item.charAt(0).toUpperCase() + parsed.item.slice(1)) : 'Stall Item');
+
+    const title = isWalkaway
+      ? 'Customer Walkaway (₹0)'
+      : parsed.isFreebie
+        ? `Freebie: ${itemLabel} (₹0)`
+        : isInquiry
+          ? `Price Inquiry: ${itemLabel} (₹0)`
+          : `${itemLabel}${parsed.quantity ? ` (${parsed.quantity} ${parsed.unit || 'unit'})` : ''}`;
+
+    // Post to CRDT double-entry ledger if real transaction occurred
+    if (amount > 0) {
+      try {
+        crdtLedger.postTransaction({
+          txId: `tx-voice-${Date.now()}`,
+          debitAccount: 'Assets:Cash',
+          creditAccount: 'Revenue:Sales',
+          amountMinor: Math.round(amount * 100),
+          currencyCode: 'INR',
+          occurredAt: Date.now()
+        });
+      } catch (e) {
+        console.warn('[CRDT] Could not post voice transaction:', e);
+      }
+    }
+
+    // Backwards-compatible legacy event
+    const evt = legacyParser.parse(cleanText, clock || 1);
+    const node = legacyLedger.addEvent(evt);
+    const balances = legacyLedger.getBalances();
+
+    res.json({
+      ok: true,
+      amount,
+      title,
+      item: parsed.itemNormalized || parsed.item,
+      quantity: parsed.quantity,
+      unit: parsed.unit,
+      isWalkaway,
+      isFreebie: parsed.isFreebie,
+      isInquiry,
+      event: evt,
+      node,
+      balances
+    });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error.message || 'Utterance parsing failed' });
+  }
 });
 
 vendorRouter.post('/loss', (req, res) => {
