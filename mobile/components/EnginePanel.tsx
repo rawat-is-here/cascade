@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { EngineResult } from '../../shared/types';
+import { EngineResult } from '../types';
 
 interface Props {
   engine?: EngineResult;

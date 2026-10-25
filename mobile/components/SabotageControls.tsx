@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { SabotageType } from '../../shared/types';
+import { SabotageType } from '../types';
 
 interface Props {
   currentScenario: SabotageType;

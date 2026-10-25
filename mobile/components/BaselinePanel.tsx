@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { BaselineResult } from '../../shared/types';
+import { BaselineResult } from '../types';
 
 interface Props {
   baseline?: BaselineResult;

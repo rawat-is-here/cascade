@@ -16,6 +16,7 @@ build/
 .next/
 .expo/
 *.tsbuildinfo
+*.apk
 
 # Logs & Debug
 npm-debug.log*

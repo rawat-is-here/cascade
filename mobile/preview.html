@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GallaSahi — Mobile App Live Preview</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+    }
+    body {
+      background-color: #050811;
+      color: #f8fafc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .phone-container {
+      width: 400px;
+      height: 840px;
+      background-color: #0a0f1d;
+      border-radius: 40px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 0 8px #1e293b;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 2px solid #334155;
+    }
+    /* Top notch */
+    .notch {
+      width: 140px;
+      height: 22px;
+      background-color: #000;
+      border-radius: 0 0 16px 16px;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+    }
+
+    /* ========================================= */
+    /* 3-SLIDE FIRST-TIME ONBOARDING OVERLAY    */
+    /* ========================================= */
+    .onboarding-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 50% 20%, #0d1e3a, #070b16 75%);
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      padding: 40px 24px 30px 24px;
+      justify-content: space-between;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    .onboarding-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.95);
+    }
+    .ob-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .ob-brand {
+      color: #10b981;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .ob-skip {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: color 0.2s;
+    }
+    .ob-skip:hover { color: #f8fafc; }
+
+    /* Slide Cards Container */
+    .slides-wrapper {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 15px 0;
+      overflow: hidden;
+    }
+    .slide-page {
+      position: absolute;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 0;
+      transform: translateX(100%);
+      pointer-events: none;
+    }
+    .slide-page.active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+    .slide-page.past {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+
+    /* UI Graphic Showcase for each slide */
+    .graphic-frame {
+      width: 100%;
+      height: 250px;
+      background-color: #0c1424;
+      border: 1.5px solid #1e293b;
+      border-radius: 20px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    /* Slide 1 Graphic Elements */
+    .pulse-ring-lg {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #10b981, #059669);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 35px rgba(16, 185, 129, 0.8);
+      animation: micPulse 2s infinite;
+    }
+    @keyframes micPulse {
+      0% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); transform: scale(0.98); }
+      50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.9); transform: scale(1.05); }
+      100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.5); transform: scale(0.98); }
+    }
+    .voice-bubble {
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-top: 16px;
+      font-size: 11px;
+      color: #38bdf8;
+      font-style: italic;
+      max-width: 90%;
+      line-height: 16px;
+    }
+
+    /* Slide 2 Graphic Elements */
+    .hero-preview-box {
+      width: 100%;
+      background-color: #131b2e;
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid #334155;
+    }
+    .preview-profit-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+
+    /* Slide 3 Graphic Elements */
+    .p2p-topology {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      align-items: center;
+    }
+    .node-phone {
+      background-color: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 10px 8px;
+      width: 80px;
+      text-align: center;
+    }
+    .bluetooth-wave {
+      color: #10b981;
+      font-size: 20px;
+      animation: wave 1.5s infinite;
+    }
+    @keyframes wave {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .slide-badge {
+      display: inline-block;
+      background-color: #064e3b;
+      color: #34d399;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+    .slide-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #f8fafc;
+      margin-bottom: 8px;
+      line-height: 26px;
+    }
+    .slide-desc {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 20px;
+      max-width: 92%;
+    }
+
+    /* Bottom Onboarding Controls */
+    .ob-bottom {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .dots-container {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+    .dot-pill {
+      width: 8px;
+      height: 8px;
+      border-radius: 4px;
+      background-color: #334155;
+      transition: all 0.3s ease;
+    }
+    .dot-pill.active {
+      width: 24px;
+      background-color: #10b981;
+    }
+    .ob-btn-row {
+      display: flex;
+      gap: 12px;
+    }
+    .ob-btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.15s;
+    }
+    .btn-next {
+      background-color: #10b981;
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+    }
+    .btn-next:hover { background-color: #059669; }
+    .btn-prev {
+      background-color: #1e293b;
+      color: #94a3b8;
+      max-width: 90px;
+    }
+    .btn-prev:hover { background-color: #334155; color: #f8fafc; }
+
+    /* ========================================= */
+    /* MAIN APPLICATION INTERFACE (DASHBOARD)   */
+    /* ========================================= */
+    .top-bar {
+      padding: 30px 16px 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1e293b;
+      background-color: #0a0f1d;
+      z-index: 10;
+    }
+    .logo {
+      color: #10b981;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .pariwar-pill {
+      display: inline-flex;
+      align-items: center;
+      background-color: #064e3b;
+      padding: 4px 8px;
+      border-radius: 12px;
+      margin-left: 8px;
+      cursor: pointer;
+    }
+    .green-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #34d399;
+      margin-right: 5px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    .pariwar-pill-text {
+      color: #a7f3d0;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .top-actions {
+      display: flex;
+      align-items: center;
+    }
+    .btn-action {
+      background-color: #1e293b;
+      color: #f8fafc;
+      border: none;
+      padding: 5px 9px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-left: 5px;
+      transition: background-color 0.15s;
+    }
+    .btn-action:hover {
+      background-color: #334155;
+    }
+    .lang-toggle-btn {
+      background-color: #042f2e;
+      border: 1px solid #0d9488;
+      color: #2dd4bf;
+      font-weight: 700;
+    }
+    .guide-btn {
+      background-color: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #0284c7;
+    }
+    .judge-btn {
+      background-color: #451a03;
+      border: 1px solid #b45309;
+      color: #fde68a;
+    }
+    /* Scroll Content */
+    .scroll-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      padding-bottom: 110px;
+    }
+    .scroll-content::-webkit-scrollbar {
+      display: none;
+    }
+    /* Hero Card */
+    .hero-card {
+      background-color: #131b2e;
+      border: 1.5px solid #1e293b;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .hero-grid {
+      display: flex;
+      justify-content: space-between;
+    }
+    .hero-col {
+      flex: 1;
+    }
+    .v-divider {
+      width: 1px;
+      background-color: #1e293b;
+      margin: 0 12px;
+    }
+    .card-label {
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .cash-val {
+      color: #f8fafc;
+      font-size: 26px;
+      font-weight: 800;
+      margin-top: 4px;
+    }
+    .card-hint {
+      color: #64748b;
+      font-size: 10px;
+      margin-top: 4px;
+    }
+    .profit-val {
+      color: #34d399;
+      font-size: 22px;
+      font-weight: 800;
+      margin-top: 4px;
+    }
+    .confidence-pill {
+      display: inline-flex;
+      align-items: center;
+      background-color: #064e3b;
+      padding: 3px 7px;
+      border-radius: 6px;
+      margin-top: 6px;
+    }
+    .confidence-text {
+      color: #a7f3d0;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    /* Deduction Ribbon */
+    .deduction-ribbon {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: #0a0f1d;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-top: 14px;
+      border: 1px solid #1e293b;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .neg { color: #f87171; }
+    .pos { color: #34d399; }
+    .dot { color: #475569; }
+    /* Quick Action Cards */
+    .quick-grid {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .quick-card {
+      flex: 1;
+      background-color: #131b2e;
+      border: 1.5px solid #1e293b;
+      border-radius: 12px;
+      padding: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .quick-card:hover {
+      border-color: #38bdf8;
+    }
+    .quick-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .quick-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 6px;
+      font-size: 14px;
+    }
+    .customer-chip {
+      background-color: #0f172a;
+      border-radius: 6px;
+      padding: 4px 6px;
+      margin-bottom: 6px;
+      color: #38bdf8;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    /* Live Feed */
+    .feed-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .feed-title {
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .feed-add {
+      color: #34d399;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .feed-item {
+      background-color: #131b2e;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+    }
+    .feed-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background-color: #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+      font-size: 14px;
+    }
+    .feed-body {
+      flex: 1;
+    }
+    .feed-text {
+      color: #f1f5f9;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .feed-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 2px;
+      font-size: 10px;
+    }
+    .feed-time { color: #64748b; }
+    .feed-conf { color: #34d399; font-weight: 700; }
+    /* Floating Mic Button */
+    .floating-mic-dock {
+      position: absolute;
+      bottom: 22px;
+      left: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .mic-btn {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #10b981, #059669);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      pointer-events: auto;
+      border: 3px solid #34d399;
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.6);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .mic-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 35px rgba(16, 185, 129, 0.85);
+    }
+    .mic-tooltip {
+      background-color: #1e293b;
+      color: #a7f3d0;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 9px;
+      font-weight: 700;
+      margin-top: 5px;
+      border: 1px solid #334155;
+    }
+    /* Bottom Navigation */
+    .bottom-nav {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background-color: #0f172a;
+      border-top: 1px solid #1e293b;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0 10px;
+      z-index: 50;
+    }
+    .nav-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #94a3b8;
+      font-size: 10px;
+      font-weight: 600;
+      width: 60px;
+    }
+    .nav-tab.active {
+      color: #34d399;
+      font-weight: 700;
+    }
+    .nav-tab span {
+      font-size: 16px;
+      margin-bottom: 2px;
+    }
+    /* Modals */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 200;
+      display: none;
+    }
+    .modal-sheet {
+      width: 100%;
+      background-color: #0c1017;
+      border-radius: 24px 24px 0 0;
+      border-top: 1px solid #1e293b;
+      padding: 20px;
+      max-height: 85%;
+      overflow-y: auto;
+    }
+    .sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .sheet-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .sheet-close {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .entry-pill {
+      background-color: #131b2e;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border: 1px solid #1e293b;
+    }
+    .btn-confirm {
+      width: 100%;
+      background-color: #10b981;
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="phone-container">
+    <div class="notch"></div>
+
+    <!-- ========================================= -->
+    <!-- 3-SLIDE ONBOARDING OVERLAY (SLIDE 1-3)    -->
+    <!-- ========================================= -->
+    <div id="onboardingScreen" class="onboarding-screen">
+      <!-- Top header with Skip -->
+      <div class="ob-top">
+        <span class="ob-brand">GallaSahi</span>
+        <button class="ob-skip" id="obSkipBtn" onclick="exitToMainApp()">Skip Tour</button>
+      </div>
+
+      <!-- Slides Container -->
+      <div class="slides-wrapper">
+        <!-- SLIDE 1: VOICE-FIRST STREET LOGGING -->
+        <div class="slide-page active" id="slide1">
+          <div class="graphic-frame">
+            <div class="pulse-ring-lg">
+              <span style="font-size: 42px;">🎙️</span>
+            </div>
+            <div class="voice-bubble" id="slide1Bubble">
+              "Bhai 3 kilo tamatar liya 180 mein… Sharma ji ka 40 jama kar, aur 7 plate poha de."
+            </div>
+          </div>
+          <span class="slide-badge" id="slide1Badge">1. ZERO-TYPING VOICE ENGINE</span>
+          <h2 class="slide-title" id="slide1Title">Speak In Your Language Amidst Market Noise</h2>
+          <p class="slide-desc" id="slide1Desc">
+            No typing numbers with oily or wet hands. Tap the glowing mic and speak naturally. Our AI extracts raw materials, customer credit, and food sales in one breath!
+          </p>
+        </div>
+
+        <!-- SLIDE 2: TRUE ACCRUAL PROFIT VS CASH IN HAND -->
+        <div class="slide-page" id="slide2">
+          <div class="graphic-frame">
+            <div class="hero-preview-box">
+              <div style="font-size: 11px; color: #94a3b8;" id="slide2BoxLabel">DRAWER CASH ≠ PROFIT</div>
+              <div class="preview-profit-row">
+                <div>
+                  <div style="font-size: 11px; color: #64748b;" id="slide2CashTxt">Cash In Hand</div>
+                  <div style="font-size: 20px; font-weight: 800; color: #f8fafc;">₹3,200</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 11px; color: #34d399;" id="slide2ProfitTxt">Asli Munafa (True Profit)</div>
+                  <div style="font-size: 20px; font-weight: 800; color: #34d399;">₹950 – ₹1,120</div>
+                  <div style="font-size: 9px; color: #a7f3d0;" id="slide2Pakka">🟢 85% Pakka</div>
+                </div>
+              </div>
+              <div style="margin-top: 10px; font-size: 10px; color: #f87171; border-top: 1px solid #1e293b; padding-top: 6px;" id="slide2Deduct">
+                -₹1,400 Mandi Raw Materials • -₹350 Spoilage
+              </div>
+            </div>
+          </div>
+          <span class="slide-badge" id="slide2Badge">2. MATHEMATICAL HONESTY</span>
+          <h2 class="slide-title" id="slide2Title">Real Profit vs. The Illusion of Cash</h2>
+          <p class="slide-desc" id="slide2Desc">
+            Never confuse today's cash drawer with actual profit. GallaSahi automatically subtracts tomorrow's raw material debt and heat spoilage, showing honest confidence ranges.
+          </p>
+        </div>
+
+        <!-- SLIDE 3: 3-DEVICE FAMILY MESH & BLUETOOTH SYNC -->
+        <div class="slide-page" id="slide3">
+          <div class="graphic-frame">
+            <div class="p2p-topology">
+              <div class="node-phone">
+                <div style="font-size: 20px;">🛒</div>
+                <div style="font-size: 10px; font-weight: 700; color: #38bdf8;" id="slide3Node1">Son (Chotu)</div>
+                <div style="font-size: 8px; color: #94a3b8;" id="slide3Node1Sub">5 AM Mandi</div>
+              </div>
+              <div class="bluetooth-wave">📡⇄📡</div>
+              <div class="node-phone" style="border-color: #10b981;">
+                <div style="font-size: 20px;">🏪</div>
+                <div style="font-size: 10px; font-weight: 700; color: #34d399;" id="slide3Node2">You (Stall)</div>
+                <div style="font-size: 8px; color: #94a3b8;" id="slide3Node2Sub">Counter Lead</div>
+              </div>
+              <div class="bluetooth-wave">⇄📡</div>
+              <div class="node-phone">
+                <div style="font-size: 20px;">👩‍🍳</div>
+                <div style="font-size: 10px; font-weight: 700; color: #fbbf24;" id="slide3Node3">Kitchen</div>
+                <div style="font-size: 8px; color: #94a3b8;" id="slide3Node3Sub">Prep & Spoil</div>
+              </div>
+            </div>
+            <div style="margin-top: 16px; background-color: #064e3b; padding: 6px 12px; border-radius: 8px; font-size: 11px; color: #a7f3d0;" id="slide3Banner">
+              🔒 100% Offline • Bluetooth CRDT Sync
+            </div>
+          </div>
+          <span class="slide-badge" id="slide3Badge">3. PARIWAR P2P MESH</span>
+          <h2 class="slide-title" id="slide3Title">Family Teamwork Synced Offline</h2>
+          <p class="slide-desc" id="slide3Desc">
+            Chotu buys at the wholesale market, you run the counter, and kitchen prep logs meals. Phones auto-sync via Bluetooth with zero internet, even surviving dead battery clock resets!
+          </p>
+        </div>
+      </div>
+
+      <!-- Bottom controls: Indicators and Next/Prev buttons -->
+      <div class="ob-bottom">
+        <div class="dots-container">
+          <div class="dot-pill active" id="dot1"></div>
+          <div class="dot-pill" id="dot2"></div>
+          <div class="dot-pill" id="dot3"></div>
+        </div>
+
+        <div class="ob-btn-row">
+          <button class="ob-btn btn-prev" id="obPrevBtn" onclick="prevSlide()" style="display: none;">Back</button>
+          <button class="ob-btn btn-next" id="obNextBtn" onclick="nextSlide()">Next Step →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================= -->
+    <!-- MAIN SCREEN HEADER (TOP BAR)              -->
+    <!-- ========================================= -->
+    <div class="top-bar">
+      <div style="display: flex; align-items: center;">
+        <span class="logo">GallaSahi</span>
+        <div class="pariwar-pill" onclick="switchTab('pariwar')">
+          <div class="green-dot"></div>
+          <span class="pariwar-pill-text" id="topPariwar">Pariwar Synced</span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="btn-action guide-btn" id="guideBtn" onclick="replayOnboarding()" title="Replay Walkthrough Tour">ℹ️ Guide</button>
+        <button class="btn-action lang-toggle-btn" id="langBtn" onclick="toggleLang()">🌐 हिंदी</button>
+        <button class="btn-action" id="menuBtn" onclick="openMenuModal()">🍽️ Menu</button>
+        <button class="btn-action judge-btn" id="judgeBtn" onclick="openJudgeModal()">🛡️ Judge</button>
+      </div>
+    </div>
+
+    <!-- TAB 1: MUNAFA DASHBOARD -->
+    <div id="tab-dashboard" class="scroll-content">
+      <!-- Hero Card -->
+      <div class="hero-card">
+        <div class="hero-grid">
+          <div class="hero-col">
+            <div class="card-label" id="lblDrawerCash">Drawer Cash</div>
+            <div class="cash-val" id="drawerCash">₹3,200</div>
+            <div class="card-hint" id="hintDrawer">Raw Cash Count</div>
+          </div>
+          <div class="v-divider"></div>
+          <div class="hero-col">
+            <div class="card-label" style="color: #34d399;" id="lblAccrualProfit">True Accrual Profit</div>
+            <div class="profit-val" id="profitVal">₹950 – ₹1,120</div>
+            <div class="confidence-pill">
+              <span class="confidence-text" id="lblConfidence">🟢 85% Confidence (Bounds)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="deduction-ribbon">
+          <span class="neg" id="ribbonRaw">-₹1,400 Raw Materials</span>
+          <span class="dot">•</span>
+          <span class="neg" id="ribbonSpoil">-₹350 Spoilage/Loss</span>
+          <span class="dot">•</span>
+          <span class="pos" id="ribbonCredit">+₹450 Unpaid Credit</span>
+        </div>
+      </div>
+
+      <!-- Quick Action Cards -->
+      <div class="quick-grid">
+        <div class="quick-card" onclick="switchTab('udhar')">
+          <div class="quick-header">
+            <div class="quick-icon" style="background-color: #3b0764; color: #c084fc;">👥</div>
+            <span style="font-size: 13px; font-weight: 700;" id="quickUdharTitle">Udhar Khata</span>
+          </div>
+          <div class="customer-chip" id="quickCustomerChip">Sharma Ji (₹240 Due)</div>
+          <div class="card-hint" id="quickUdharHint">Total ₹790 due • Send alert</div>
+        </div>
+
+        <div class="quick-card" onclick="switchTab('rasoi')">
+          <div class="quick-header">
+            <div class="quick-icon" style="background-color: #064e3b; color: #34d399;">🥘</div>
+            <span style="font-size: 13px; font-weight: 700;" id="quickRasoiTitle">Smart Kitchen</span>
+          </div>
+          <div class="customer-chip" id="quickRasoiChip">5kg Potato → ~35 plates</div>
+          <div class="card-hint" id="quickRasoiHint">Recipe & Loss Attribution</div>
+        </div>
+      </div>
+
+      <!-- Live Activity Feed -->
+      <div class="feed-header">
+        <span class="feed-title" id="lblFeedTitle">Today's Live Activity Stream</span>
+        <span class="feed-add" id="lblFeedAdd" onclick="openVoiceModal()">+ Voice Add</span>
+      </div>
+
+      <div class="feed-item">
+        <div class="feed-icon" style="color: #34d399;">🎙️</div>
+        <div class="feed-body">
+          <div class="feed-text" id="feedItem1">Sharma Ji settled ₹40, 7 plates Poha (+₹175)</div>
+          <div class="feed-meta">
+            <span class="feed-time" id="feedTime1">10 mins ago</span>
+            <span class="feed-conf" id="feedConf1">92% Confidence</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="feed-item">
+        <div class="feed-icon" style="color: #38bdf8;">🔔</div>
+        <div class="feed-body">
+          <div class="feed-text">PhonePe Soundbox: ₹25 Received</div>
+          <div class="feed-meta">
+            <span class="feed-time" id="feedTime2">24 mins ago</span>
+            <span class="feed-conf" id="feedConf2">100% Matched</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="feed-item">
+        <div class="feed-icon" style="color: #fbbf24;">📄</div>
+        <div class="feed-body">
+          <div class="feed-text" id="feedItem3">Chotu Mandi Slip: 10kg Potato, 5L Oil</div>
+          <div class="feed-meta">
+            <span class="feed-time" id="feedTime3">06:15 AM today</span>
+            <span class="feed-conf" id="feedConf3">95% Confidence</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: UDHAR KHATA -->
+    <div id="tab-udhar" class="scroll-content" style="display: none;">
+      <div class="hero-card" style="border-color: #7e22ce; background-color: #1f132e;">
+        <div class="card-label" style="color: #d8b4fe;" id="lblTotalUdhar">Total Market Credit (Udhar)</div>
+        <div class="cash-val">₹790</div>
+        <div class="card-hint" style="color: #c084fc;" id="hintTotalUdhar">4 Regular Customers • Polite WhatsApp reminders</div>
+      </div>
+
+      <div style="font-size: 13px; font-weight: 700; color: #94a3b8; margin-bottom: 10px;" id="lblCustomerAccounts">Customer Accounts & Street Aliases:</div>
+
+      <div class="entry-pill">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 15px; font-weight: 700;">Sharma Ji</div>
+            <div style="font-size: 11px; color: #7dd3fc; margin-top: 2px;" id="aliasSharma">🏷️ Scooter wala (Red Bajaj Chetak)</div>
+          </div>
+          <div style="color: #f87171; font-size: 18px; font-weight: 800;">₹240 <span style="font-size: 11px; font-weight: 500;" id="tagDue1">Due</span></div>
+        </div>
+        <div style="margin-top: 8px; display: flex; gap: 8px;">
+          <button class="btn-action" style="flex: 1; background-color: #10b981;" id="btnSettle1" onclick="alert('₹40 settled successfully!')">Settle ₹40</button>
+          <button class="btn-action" style="flex: 1; background-color: #064e3b; border: 1px solid #059669;" id="btnRemind1" onclick="alert('WhatsApp reminder sent: Hello Sharma Ji, your chai bill of ₹240 is pending. Thank you!')">Send WhatsApp</button>
+        </div>
+      </div>
+
+      <div class="entry-pill">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 15px; font-weight: 700;">Ramesh Auto-wala</div>
+            <div style="font-size: 11px; color: #7dd3fc; margin-top: 2px;" id="aliasRamesh">🏷️ Blue Shirt Auto (MH-31-8890)</div>
+          </div>
+          <div style="color: #f87171; font-size: 18px; font-weight: 800;">₹80 <span style="font-size: 11px; font-weight: 500;" id="tagDue2">Due</span></div>
+        </div>
+        <div style="margin-top: 8px; display: flex; gap: 8px;">
+          <button class="btn-action" style="flex: 1; background-color: #10b981;" id="btnSettle2" onclick="alert('₹80 fully settled!')">Settle Full</button>
+          <button class="btn-action" style="flex: 1; background-color: #064e3b; border: 1px solid #059669;" id="btnRemind2" onclick="alert('WhatsApp reminder sent!')">Send WhatsApp</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: SMART RASOI -->
+    <div id="tab-rasoi" class="scroll-content" style="display: none;">
+      <div class="hero-card" style="border-color: #0284c7; background-color: #0f172a;">
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: #38bdf8; font-weight: 700; font-size: 14px;" id="lblRecipeInference">Recipe Inference (Zero-Shot BOM)</span>
+          <span style="background-color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 10px;">BOM-Free</span>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 12px;">
+          <div style="flex: 1; background-color: #1e293b; padding: 10px; border-radius: 8px;">
+            <div style="font-size: 11px; color: #94a3b8;" id="lblPotatoBurn">Potato Burn</div>
+            <div style="font-size: 18px; font-weight: 800;">5.0 kg</div>
+          </div>
+          <div style="flex: 1; background-color: #1e293b; padding: 10px; border-radius: 8px;">
+            <div style="font-size: 11px; color: #94a3b8;" id="lblPohaBurn">Poha Burn</div>
+            <div style="font-size: 18px; font-weight: 800;">2.5 kg</div>
+          </div>
+        </div>
+        <div style="background-color: #064e3b; padding: 10px; border-radius: 8px; margin-top: 12px; font-size: 12px; color: #a7f3d0;" id="lblPlatesInferred">
+          ✨ Inferred Plates Sold: <b>32 to 38 Plates Poha</b> (Revenue ~₹875)
+        </div>
+      </div>
+
+      <div class="hero-card" style="border-color: #9333ea; background-color: #181124;">
+        <div style="color: #c084fc; font-weight: 700; font-size: 14px; margin-bottom: 8px;" id="lblLossTitle">3-Way Loss Attribution Model</div>
+        <div style="font-size: 11px; color: #a855f7; margin-bottom: 12px;" id="lblLossDesc">Probabilistic split for 3.2 kg unrecorded inventory drop:</div>
+
+        <div style="margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; font-size: 11px;">
+            <span id="lblHeatSpoil">🍅 Ambient Heat & Spoilage:</span>
+            <span style="color: #f87171; font-weight: 700;">60%</span>
+          </div>
+          <div style="height: 6px; background: #2e1065; border-radius: 3px; margin-top: 4px;">
+            <div style="width: 60%; height: 100%; background: #ef4444; border-radius: 3px;"></div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; font-size: 11px;">
+            <span id="lblFamilyMeals">🍽️ Family Breakfast/Lunch:</span>
+            <span style="color: #fbbf24; font-weight: 700;">25%</span>
+          </div>
+          <div style="height: 6px; background: #2e1065; border-radius: 3px; margin-top: 4px;">
+            <div style="width: 25%; height: 100%; background: #f59e0b; border-radius: 3px;"></div>
+          </div>
+        </div>
+
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 11px;">
+            <span id="lblTheftWaste">❓ Roadside Theft & Counter Spill:</span>
+            <span style="color: #38bdf8; font-weight: 700;">15%</span>
+          </div>
+          <div style="height: 6px; background: #2e1065; border-radius: 3px; margin-top: 4px;">
+            <div style="width: 15%; height: 100%; background: #0284c7; border-radius: 3px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: PARIWAR MESH -->
+    <div id="tab-pariwar" class="scroll-content" style="display: none;">
+      <div class="hero-card" style="border-color: #059669; background-color: #062d22;">
+        <div style="color: #34d399; font-weight: 700; font-size: 15px;" id="lblMeshTitle">Family P2P Mesh (3 Devices)</div>
+        <div style="font-size: 11px; color: #a7f3d0; margin-top: 4px;" id="lblMeshDesc">Bluetooth & local Wi-Fi ledger sync with zero internet required</div>
+        <button class="btn-action" style="margin-top: 10px; background-color: #10b981; width: 100%; padding: 8px;" id="btnSyncNow" onclick="alert('Synced 3 new transactions from Chotu phone via Bluetooth!')">🔄 Sync Bluetooth Now</button>
+      </div>
+
+      <div class="entry-pill">
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-weight: 700;" id="node1Name">Stall Counter (You)</span>
+          <span style="background: #064e3b; color: #34d399; font-size: 10px; padding: 2px 6px; border-radius: 4px;">Active</span>
+        </div>
+        <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;" id="node1Desc">Main Counter & Cash Lead • BT Master</div>
+      </div>
+
+      <div class="entry-pill">
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-weight: 700;" id="node2Name">Chotu (Mandi Buyer)</span>
+          <span style="background: #064e3b; color: #34d399; font-size: 10px; padding: 2px 6px; border-radius: 4px;">🟢 Connected</span>
+        </div>
+        <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;" id="node2Desc">Wholesale Market Node • Synced 2 mins ago</div>
+      </div>
+
+      <div class="entry-pill">
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-weight: 700;" id="node3Name">Sunita (Home Kitchen)</span>
+          <span style="background: #334155; color: #94a3b8; font-size: 10px; padding: 2px 6px; border-radius: 4px;">🟡 Offline</span>
+        </div>
+        <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;" id="node3Desc">Kitchen Prep Node • Store & Forward Queue</div>
+      </div>
+    </div>
+
+    <!-- Floating Mic Dock -->
+    <div class="floating-mic-dock">
+      <div class="mic-btn" onclick="openVoiceModal()">
+        <span style="font-size: 32px; color: #fff;">🎙️</span>
+      </div>
+      <div class="mic-tooltip" id="micTooltip">Tap & Speak to Log</div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="bottom-nav">
+      <div class="nav-tab active" id="btn-munafa" onclick="switchTab('dashboard')">
+        <span>📊</span>
+        <span id="tabNavMunafa">Profit</span>
+      </div>
+      <div class="nav-tab" id="btn-udhar" onclick="switchTab('udhar')">
+        <span>📒</span>
+        <span id="tabNavUdhar">Credit</span>
+      </div>
+      <div style="width: 60px;"></div>
+      <div class="nav-tab" id="btn-rasoi" onclick="switchTab('rasoi')">
+        <span>🥘</span>
+        <span id="tabNavRasoi">Kitchen</span>
+      </div>
+      <div class="nav-tab" id="btn-pariwar" onclick="switchTab('pariwar')">
+        <span>📡</span>
+        <span id="tabNavPariwar">Family</span>
+      </div>
+    </div>
+
+    <!-- VOICE INGESTION MODAL -->
+    <div id="voice-modal" class="modal-overlay">
+      <div class="modal-sheet">
+        <div class="sheet-header">
+          <span class="sheet-title" id="lblVoiceModalTitle">🎙️ Street Voice Engine (85dB Noise)</span>
+          <button class="sheet-close" onclick="closeVoiceModal()">✕</button>
+        </div>
+
+        <div style="background: #161f2e; padding: 12px; border-radius: 10px; border-left: 3px solid #38bdf8; margin-bottom: 12px; font-size: 12px; font-style: italic;" id="lblSampleUtterance">
+          "Bhai 3 kilo tamatar liya 180 mein… Sharma ji ka 40 jama kar, aur 7 plate poha de."
+        </div>
+
+        <div style="font-size: 12px; font-weight: 700; color: #34d399; margin-bottom: 8px;" id="lblCompoundTitle">AI Parsed 3 Compound Ledger Postings:</div>
+
+        <div class="entry-pill">
+          <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 12px;">
+            <span id="vTitle1">🛒 Raw Material (Inventory)</span>
+            <span style="color: #34d399;" id="vConf1">94% Confidence</span>
+          </div>
+          <div style="font-size: 11px; color: #cbd5e1; margin-top: 2px;" id="vDesc1">+3 kg Tomato @ ₹180 Cash Out</div>
+        </div>
+
+        <div class="entry-pill">
+          <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 12px;">
+            <span id="vTitle2">👤 Credit Reconciled (Udhar)</span>
+            <span style="color: #34d399;" id="vConf2">88% Confidence</span>
+          </div>
+          <div style="font-size: 11px; color: #cbd5e1; margin-top: 2px;" id="vDesc2">Sharma Ji settled ₹40 credit</div>
+        </div>
+
+        <div class="entry-pill">
+          <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 12px;">
+            <span id="vTitle3">🍛 Food Sales</span>
+            <span style="color: #34d399;" id="vConf3">96% Confidence</span>
+          </div>
+          <div style="font-size: 11px; color: #cbd5e1; margin-top: 2px;" id="vDesc3">7 plates Poha (+₹175 Cash In)</div>
+        </div>
+
+        <button class="btn-confirm" id="btnConfirmVoice" onclick="confirmVoice()">✅ Looks Good, Commit to Ledger</button>
+      </div>
+    </div>
+
+    <!-- MENU MODAL -->
+    <div id="menu-modal" class="modal-overlay">
+      <div class="modal-sheet">
+        <div class="sheet-header">
+          <span class="sheet-title" id="lblMenuTitle">🍽️ Stall Menu & Smart Margin Advisor</span>
+          <button class="sheet-close" onclick="closeMenuModal()">✕</button>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <button class="btn-action" style="flex: 1; background-color: #0284c7;" id="btnOcrSnap" onclick="alert('Board photo scanned! Added Bread Pakoda ₹15 & Coffee ₹20 to menu.')">📷 Snap Board (OCR)</button>
+          <button class="btn-action" style="flex: 1; background-color: #0d9488;" id="btnVoiceMenu" onclick="alert('Voice menu created! Added Dal Kachori ₹12.')">🎙️ Voice Create</button>
+        </div>
+
+        <div class="entry-pill">
+          <div style="display: flex; justify-content: space-between; font-weight: 700;">
+            <span id="item1Name">Cutting Chai</span>
+            <span style="color: #34d399; font-size: 16px;">₹10</span>
+          </div>
+          <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;" id="item1Cost">Cost: ~₹4.20 • Margin: +₹5.80 (58%)</div>
+        </div>
+
+        <div class="entry-pill">
+          <div style="display: flex; justify-content: space-between; font-weight: 700;">
+            <span id="item2Name">Poha (Full Plate)</span>
+            <span style="color: #34d399; font-size: 16px;">₹25</span>
+          </div>
+          <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;" id="item2Cost">Cost: ~₹11.50 • Margin: +₹13.50 (54%)</div>
+        </div>
+
+        <button class="btn-confirm" id="btnSaveMenu" onclick="closeMenuModal()">Save Menu</button>
+      </div>
+    </div>
+
+    <!-- JUDGE MODAL -->
+    <div id="judge-modal" class="modal-overlay">
+      <div class="modal-sheet">
+        <div class="sheet-header">
+          <span class="sheet-title">🛡️ Judge Verification (0.5% Core)</span>
+          <button class="sheet-close" onclick="closeJudgeModal()">✕</button>
+        </div>
+
+        <div class="entry-pill" style="border-color: #10b981; background-color: #062d22;">
+          <div style="color: #34d399; font-weight: 700; font-size: 12px;">✅ 0.5% Core Probabilistic Invariant Engine</div>
+          <div style="font-size: 11px; color: #a7f3d0; margin-top: 4px;">
+            Conserved Double-Entry Delta CRDT state strictly balanced: Σ(Debits) == Σ(Credits).
+          </div>
+          <div style="font-size: 10px; color: #38bdf8; font-family: monospace; margin-top: 4px;">
+            Bounds: [950.0, 1120.0] | Latency: 14ms
+          </div>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 700; color: #fbbf24; margin: 10px 0 6px 0;">⚡ Red Team Adversarial Stress Tests:</div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn-action" style="flex: 1; background: #dc2626;" onclick="alert('85dB Noise Injection: Acoustic VAD filter passed! Phonetic lattice accurately resolved 7 plates.')">85dB Noise</button>
+          <button class="btn-action" style="flex: 1; background: #ea580c;" onclick="alert('1970 Clock Drift: Merkle-Lamport DAG rejected epoch reset! Causal ledger sequence preserved.')">1970 Clock</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    let currentLang = 'en';
+
+    function updateSlideUI() {
+      // Manage slide visibility
+      document.querySelectorAll('.slide-page').forEach((el, idx) => {
+        el.classList.remove('active', 'past');
+        if (idx + 1 === currentSlide) {
+          el.classList.add('active');
+        } else if (idx + 1 < currentSlide) {
+          el.classList.add('past');
+        }
+      });
+
+      // Manage dots
+      for (let i = 1; i <= 3; i++) {
+        const dot = document.getElementById('dot' + i);
+        if (i === currentSlide) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      }
+
+      // Manage Prev button
+      const prevBtn = document.getElementById('obPrevBtn');
+      if (currentSlide > 1) {
+        prevBtn.style.display = 'block';
+        prevBtn.innerText = currentLang === 'en' ? 'Back' : 'वापस';
+      } else {
+        prevBtn.style.display = 'none';
+      }
+
+      // Manage Next / Finish button
+      const nextBtn = document.getElementById('obNextBtn');
+      if (currentSlide === 3) {
+        nextBtn.innerText = currentLang === 'en' ? 'Get Started →' : 'गल्ला शुरू करें →';
+        nextBtn.style.background = 'linear-gradient(135deg, #10b981, #047857)';
+      } else {
+        nextBtn.innerText = currentLang === 'en' ? 'Next Step →' : 'आगे बढ़ें →';
+        nextBtn.style.background = '#10b981';
+      }
+    }
+
+    function nextSlide() {
+      if (currentSlide < 3) {
+        currentSlide++;
+        updateSlideUI();
+      } else {
+        exitToMainApp();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlideUI();
+      }
+    }
+
+    function exitToMainApp() {
+      const screen = document.getElementById('onboardingScreen');
+      screen.classList.add('hidden');
+    }
+
+    function replayOnboarding() {
+      currentSlide = 1;
+      updateSlideUI();
+      const screen = document.getElementById('onboardingScreen');
+      screen.classList.remove('hidden');
+    }
+
+    const translations = {
+      en: {
+        langBtn: "🌐 हिंदी",
+        guideBtn: "ℹ️ Guide",
+        topPariwar: "Pariwar Synced",
+        menuBtn: "🍽️ Menu",
+        judgeBtn: "🛡️ Judge",
+        obSkipBtn: "Skip Tour",
+        slide1Badge: "1. ZERO-TYPING VOICE ENGINE",
+        slide1Title: "Speak In Your Language Amidst Market Noise",
+        slide1Desc: "No typing numbers with oily or wet hands. Tap the glowing mic and speak naturally. Our AI extracts raw materials, customer credit, and food sales in one breath!",
+        slide1Bubble: '"Bhai 3 kilo tamatar liya 180 mein… Sharma ji ka 40 jama kar, aur 7 plate poha de."',
+        slide2Badge: "2. MATHEMATICAL HONESTY",
+        slide2Title: "Real Profit vs. The Illusion of Cash",
+        slide2Desc: "Never confuse today's cash drawer with actual profit. GallaSahi automatically subtracts tomorrow's raw material debt and heat spoilage, showing honest confidence ranges.",
+        slide2BoxLabel: "DRAWER CASH ≠ PROFIT",
+        slide2CashTxt: "Cash In Hand",
+        slide2ProfitTxt: "Asli Munafa (True Profit)",
+        slide2Pakka: "🟢 85% Pakka",
+        slide2Deduct: "-₹1,400 Mandi Raw Materials • -₹350 Spoilage",
+        slide3Badge: "3. PARIWAR P2P MESH",
+        slide3Title: "Family Teamwork Synced Offline",
+        slide3Desc: "Chotu buys at the wholesale market, you run the counter, and kitchen prep logs meals. Phones auto-sync via Bluetooth with zero internet, even surviving dead battery clock resets!",
+        slide3Node1: "Son (Chotu)",
+        slide3Node1Sub: "5 AM Mandi",
+        slide3Node2: "You (Stall)",
+        slide3Node2Sub: "Counter Lead",
+        slide3Node3: "Kitchen",
+        slide3Node3Sub: "Prep & Spoil",
+        slide3Banner: "🔒 100% Offline • Bluetooth CRDT Sync",
+        lblDrawerCash: "Drawer Cash",
+        hintDrawer: "Raw Cash Count",
+        lblAccrualProfit: "True Accrual Profit",
+        lblConfidence: "🟢 85% Confidence (Bounds)",
+        ribbonRaw: "-₹1,400 Raw Materials",
+        ribbonSpoil: "-₹350 Spoilage/Loss",
+        ribbonCredit: "+₹450 Unpaid Credit",
+        quickUdharTitle: "Udhar Khata",
+        quickCustomerChip: "Sharma Ji (₹240 Due)",
+        quickUdharHint: "Total ₹790 due • Send alert",
+        quickRasoiTitle: "Smart Kitchen",
+        quickRasoiChip: "5kg Potato → ~35 plates",
+        quickRasoiHint: "Recipe & Loss Attribution",
+        lblFeedTitle: "Today's Live Activity Stream",
+        lblFeedAdd: "+ Voice Add",
+        feedItem1: "Sharma Ji settled ₹40, 7 plates Poha (+₹175)",
+        feedTime1: "10 mins ago",
+        feedConf1: "92% Confidence",
+        feedItem3: "Chotu Mandi Slip: 10kg Potato, 5L Oil",
+        feedTime3: "06:15 AM today",
+        feedConf3: "95% Confidence",
+        lblTotalUdhar: "Total Market Credit (Udhar)",
+        hintTotalUdhar: "4 Regular Customers • Polite WhatsApp reminders",
+        lblCustomerAccounts: "Customer Accounts & Street Aliases:",
+        aliasSharma: "🏷️ Scooter wala (Red Bajaj Chetak)",
+        tagDue1: "Due",
+        btnSettle1: "Settle ₹40",
+        btnRemind1: "Send WhatsApp",
+        aliasRamesh: "🏷️ Blue Shirt Auto (MH-31-8890)",
+        tagDue2: "Due",
+        btnSettle2: "Settle Full",
+        btnRemind2: "Send WhatsApp",
+        lblRecipeInference: "Recipe Inference (Zero-Shot BOM)",
+        lblPotatoBurn: "Potato Burn",
+        lblPohaBurn: "Poha Burn",
+        lblPlatesInferred: "✨ Inferred Plates Sold: 32 to 38 Plates Poha (Revenue ~₹875)",
+        lblLossTitle: "3-Way Loss Attribution Model",
+        lblLossDesc: "Probabilistic split for 3.2 kg unrecorded inventory drop:",
+        lblHeatSpoil: "🍅 Ambient Heat & Spoilage:",
+        lblFamilyMeals: "🍽️ Family Breakfast/Lunch:",
+        lblTheftWaste: "❓ Roadside Theft & Counter Spill:",
+        lblMeshTitle: "Family P2P Mesh (3 Devices)",
+        lblMeshDesc: "Bluetooth & local Wi-Fi ledger sync with zero internet required",
+        btnSyncNow: "🔄 Sync Bluetooth Now",
+        node1Name: "Stall Counter (You)",
+        node1Desc: "Main Counter & Cash Lead • BT Master",
+        node2Name: "Chotu (Mandi Buyer)",
+        node2Desc: "Wholesale Market Node • Synced 2 mins ago",
+        node3Name: "Sunita (Home Kitchen)",
+        node3Desc: "Kitchen Prep Node • Store & Forward Queue",
+        micTooltip: "Tap & Speak to Log",
+        tabNavMunafa: "Profit",
+        tabNavUdhar: "Credit",
+        tabNavRasoi: "Kitchen",
+        tabNavPariwar: "Family",
+        lblVoiceModalTitle: "🎙️ Street Voice Engine (85dB Noise)",
+        lblCompoundTitle: "AI Parsed 3 Compound Ledger Postings:",
+        vTitle1: "🛒 Raw Material (Inventory)",
+        vConf1: "94% Confidence",
+        vDesc1: "+3 kg Tomato @ ₹180 Cash Out",
+        vTitle2: "👤 Credit Reconciled (Udhar)",
+        vConf2: "88% Confidence",
+        vDesc2: "Sharma Ji settled ₹40 credit",
+        vTitle3: "🍛 Food Sales",
+        vConf3: "96% Confidence",
+        vDesc3: "7 plates Poha (+₹175 Cash In)",
+        btnConfirmVoice: "✅ Looks Good, Commit to Ledger",
+        lblMenuTitle: "🍽️ Stall Menu & Smart Margin Advisor",
+        btnOcrSnap: "📷 Snap Board (OCR)",
+        btnVoiceMenu: "🎙️ Voice Create",
+        item1Name: "Cutting Chai",
+        item1Cost: "Cost: ~₹4.20 • Margin: +₹5.80 (58%)",
+        item2Name: "Poha (Full Plate)",
+        item2Cost: "Cost: ~₹11.50 • Margin: +₹13.50 (54%)",
+        btnSaveMenu: "Save Menu"
+      },
+      hi: {
+        langBtn: "🌐 English",
+        guideBtn: "ℹ️ गाइड",
+        topPariwar: "परिवार सिंक",
+        menuBtn: "🍽️ मेनू",
+        judgeBtn: "🛡️ जज मोड",
+        obSkipBtn: "स्किप करें",
+        slide1Badge: "१. जीरो-टाइपिंग आवाज़ इंजन",
+        slide1Title: "ट्रैफिक शोर में भी अपनी भाषा में बोलें",
+        slide1Desc: "गीले या तेल वाले हाथों से नंबर टाइप करने की ज़रूरत नहीं। माइक दबाकर सीधे बोलें—AI कच्चा माल, उधारी और बिक्री एक ही सांस में निकाल लेगा!",
+        slide1Bubble: '"भाई ३ किलो टमाटर लिया १८० में… शर्मा जी का ४० जमा कर, और ७ प्लेट पोहा दे।"',
+        slide2Badge: "२. ईमानदार गणित (Bounds)",
+        slide2Title: "असली मुनाफ़ा बनाम गल्ले का कैश",
+        slide2Desc: "शाम को गल्ले के कुल कैश को कभी मुनाफ़ा न समझें। GallaSahi सुबह की मंडी उधारी और गर्मी की सड़न खुद घटाकर असली मुनाफ़ा दिखाता है।",
+        slide2BoxLabel: "गल्ले का कैश ≠ मुनाफ़ा",
+        slide2CashTxt: "हाथ की नक़दी",
+        slide2ProfitTxt: "असली मुनाफ़ा",
+        slide2Pakka: "🟢 85% पक्का",
+        slide2Deduct: "-₹1,400 मंडी कच्चा माल • -₹350 सड़न/खपत",
+        slide3Badge: "३. परिवार P2P मेश नेटवर्क",
+        slide3Title: "परिवार का काम, बिना इंटरनेट सिंक",
+        slide3Desc: "छोटू सुबह मंडी में ख़रीदता है, आप दुकान संभालते हैं, और घर में तैयारी होती है। तीनों फ़ोन बिना इंटरनेट ब्लूटूथ पर अपने-आप सिंक हो जाते हैं!",
+        slide3Node1: "छोटू (बेटा)",
+        slide3Node1Sub: "सुबह 5 बजे मंडी",
+        slide3Node2: "आप (ठेला)",
+        slide3Node2Sub: "गल्ला व बिक्री",
+        slide3Node3: "रसोई (सुनीता)",
+        slide3Node3Sub: "तैयारी व नुक़सान",
+        slide3Banner: "🔒 100% ऑफ़लाइन • ब्लूटूथ CRDT सिंक",
+        lblDrawerCash: "गल्ले में कैश",
+        hintDrawer: "हाथ की नक़दी (Drawer)",
+        lblAccrualProfit: "असली मुनाफ़ा",
+        lblConfidence: "🟢 85% पक्का (Bounds)",
+        ribbonRaw: "-₹1,400 कच्चा माल",
+        ribbonSpoil: "-₹350 सड़न/खपत",
+        ribbonCredit: "+₹450 उधारी",
+        quickUdharTitle: "उधार खाता",
+        quickCustomerChip: "शर्मा जी (₹240 बाक़ी)",
+        quickUdharHint: "कुल ₹790 बाक़ी • तकाज़ा",
+        quickRasoiTitle: "स्मार्ट रसोई",
+        quickRasoiChip: "5kg आलू → ~35 प्लेट",
+        quickRasoiHint: "रेसिपी & नुक़सान विभाजन",
+        lblFeedTitle: "आज की मुख्य प्रविष्टियाँ",
+        lblFeedAdd: "+ बोल कर जोड़ें",
+        feedItem1: "शर्मा जी का ₹40 जमा, 7 प्लेट पोहा (+₹175)",
+        feedTime1: "10 मिनट पहले",
+        feedConf1: "92% पक्का",
+        feedItem3: "छोटू मंडी पर्ची: 10kg आलू, 5L तेल",
+        feedTime3: "सुबह 06:15 AM",
+        feedConf3: "95% पक्का",
+        lblTotalUdhar: "कुल बाक़ी उधारी (Street Credit)",
+        hintTotalUdhar: "4 नियमित ग्राहक • बिना तनाव तकाज़ा भेजें",
+        lblCustomerAccounts: "ग्राहक खाते (Street Aliases):",
+        aliasSharma: "🏷️ स्कूटर वाले (Red Bajaj Chetak)",
+        tagDue1: "बाक़ी",
+        btnSettle1: "₹40 जमा करें",
+        btnRemind1: "वॉट्सऐप तकाज़ा",
+        aliasRamesh: "🏷️ ब्लू शर्ट ऑटो (MH-31-8890)",
+        tagDue2: "बाक़ी",
+        btnSettle2: "पूरा जमा करें",
+        btnRemind2: "वॉट्सऐप तकाज़ा",
+        lblRecipeInference: "रेसिपी अनुमान (Zero-Shot BOM)",
+        lblPotatoBurn: "आलू की खपत",
+        lblPohaBurn: "पोहा की खपत",
+        lblPlatesInferred: "✨ अनुमानित बिकी प्लेटें: 32 से 38 प्लेट पोहा (आय ~₹875)",
+        lblLossTitle: "नुक़सान विभाजन (3-Way Loss Attribution)",
+        lblLossDesc: "कच्चे माल में ३.२ किग्रा की कमी का संभाव्यता मॉडल:",
+        lblHeatSpoil: "🍅 धूप व गर्मी से सड़न (Heat Spoilage):",
+        lblFamilyMeals: "🍽️ परिवार का भोजन (Family Lunch):",
+        lblTheftWaste: "❓ सड़क बिखराव / चोरी (Theft/Waste):",
+        lblMeshTitle: "परिवार P2P मेश (3 Devices)",
+        lblMeshDesc: "बिना इंटरनेट ब्लूटूथ व वाई-फ़ाई पर लेजर सिंक",
+        btnSyncNow: "🔄 अभी ब्लूटूथ सिंक करें",
+        node1Name: "ठेला गल्ला (You)",
+        node1Desc: "Main Counter Lead • BT Master",
+        node2Name: "छोटू (Mandi Buyer)",
+        node2Desc: "मंडी खरीदार • Synced 2 min ago",
+        node3Name: "घर की रसोई (Sunita)",
+        node3Desc: "Kitchen Prep Node • Store & Forward",
+        micTooltip: "बोल कर दर्ज करें (Tap & Speak)",
+        tabNavMunafa: "मुनाफ़ा",
+        tabNavUdhar: "उधारी",
+        tabNavRasoi: "रसोई",
+        tabNavPariwar: "परिवार",
+        lblVoiceModalTitle: "🎙️ वेंडर बोली पहचान (85dB Noise)",
+        lblCompoundTitle: "AI द्वारा निकाले गए ३ लेजर खाते:",
+        vTitle1: "🛒 कच्चा माल (Inventory)",
+        vConf1: "94% पक्का",
+        vDesc1: "+3 kg टमाटर @ ₹180 नक़द गया",
+        vTitle2: "👤 उधारी जमा (Credit Reconciled)",
+        vConf2: "88% पक्का",
+        vDesc2: "शर्मा जी ने ₹40 जमा किए",
+        vTitle3: "🍛 नाश्ता बिक्री (Food Sales)",
+        vConf3: "96% पक्का",
+        vDesc3: "7 प्लेट पोहा (+₹175 नक़द आया)",
+        btnConfirmVoice: "✅ सही है, लेजर में दर्ज करें",
+        lblMenuTitle: "🍽️ दुकान का मेनू & सही दाम",
+        btnOcrSnap: "📷 बोर्ड फ़ोटो लें (OCR)",
+        btnVoiceMenu: "🎙️ बोल कर बनाएँ",
+        item1Name: "कटिंग चाय (Cutting Chai)",
+        item1Cost: "लागत: ~₹4.20 • मुनाफ़ा: +₹5.80 (58%)",
+        item2Name: "पोहा (Full Plate)",
+        item2Cost: "लागत: ~₹11.50 • मुनाफ़ा: +₹13.50 (54%)",
+        btnSaveMenu: "सेव करें"
+      }
+    };
+
+    function toggleLang() {
+      currentLang = currentLang === 'en' ? 'hi' : 'en';
+      const dict = translations[currentLang];
+      for (const [id, val] of Object.entries(dict)) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+      }
+      updateSlideUI();
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.scroll-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById('tab-' + tabId).style.display = 'block';
+      if (tabId === 'dashboard') document.getElementById('btn-munafa').classList.add('active');
+      if (tabId === 'udhar') document.getElementById('btn-udhar').classList.add('active');
+      if (tabId === 'rasoi') document.getElementById('btn-rasoi').classList.add('active');
+      if (tabId === 'pariwar') document.getElementById('btn-pariwar').classList.add('active');
+    }
+
+    function openVoiceModal() { document.getElementById('voice-modal').style.display = 'flex'; }
+    function closeVoiceModal() { document.getElementById('voice-modal').style.display = 'none'; }
+    function openMenuModal() { document.getElementById('menu-modal').style.display = 'flex'; }
+    function closeMenuModal() { document.getElementById('menu-modal').style.display = 'none'; }
+    function openJudgeModal() { document.getElementById('judge-modal').style.display = 'flex'; }
+    function closeJudgeModal() { document.getElementById('judge-modal').style.display = 'none'; }
+
+    function confirmVoice() {
+      document.getElementById('drawerCash').innerText = '₹3,235';
+      document.getElementById('profitVal').innerText = '₹1,080 – ₹1,255';
+      alert(currentLang === 'en' 
+        ? 'Ledger updated: -₹180 Raw Materials, +₹40 Credit Settled, +₹175 Sales!' 
+        : 'लेजर में ३ खाते अपडेट हो गए: कच्चा माल -₹180, उधारी जमा +₹40, बिक्री +₹175!');
+      closeVoiceModal();
+    }
+
+    // Initialize slide state
+    updateSlideUI();
+  </script>
+</body>
+</html>
