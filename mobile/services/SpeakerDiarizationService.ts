@@ -1,4 +1,4 @@
-import { OnDeviceSpeakerDiarizer, type DiarizationResult } from '../../core/linguistics/speaker_diarizer.ts';
+import { OnDeviceSpeakerDiarizer, type DiarizationResult } from '../../core/linguistics/speaker_diarizer';
 
 /**
  * Mobile Service: Speaker Diarization & Voice Profile Management

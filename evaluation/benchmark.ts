@@ -33,10 +33,10 @@ export function runFullSabotageBenchmark(): {
 
   // Load datasets
   const normalCases: DataPayload[] = JSON.parse(
-    readFileSync(join(process.cwd(), 'evaluation', 'datasets', 'normal_cases.json'), 'utf8')
+    readFileSync(join(__dirname, 'datasets', 'normal_cases.json'), 'utf8')
   );
   const adversarialCases: DataPayload[] = JSON.parse(
-    readFileSync(join(process.cwd(), 'evaluation', 'datasets', 'adversarial_cases.json'), 'utf8')
+    readFileSync(join(__dirname, 'datasets', 'adversarial_cases.json'), 'utf8')
   );
 
   const baseline = new NaiveCompetitorBaseline();

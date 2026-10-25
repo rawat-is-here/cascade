@@ -5,10 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 interface Props {
   visible: boolean;
   onClose: () => void;
+  apiBaseUrl?: string;
   onCalculate?: (spoilage: number, eating: number, theft: number) => void;
 }
 
-export const LossModal: React.FC<Props> = ({ visible, onClose, onCalculate }) => {
+export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, onCalculate }) => {
   const [commodity, setCommodity] = useState('Tomatoes');
   const [missingKg, setMissingKg] = useState('4.0');
   const [temp, setTemp] = useState('39');

@@ -33,3 +33,7 @@ models/
 *.gguf
 *.onnx
 *.zip
+
+# Local test data & nested clone
+data/
+cascade/

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Constants from 'expo-constants';
 import {
   StyleSheet,
   Text,
@@ -10,6 +11,9 @@ import {
   Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { MorningStockModal } from './components/MorningStockModal';
+import { UpiEventsModal } from './components/UpiEventsModal';
+import { SyncModal } from './components/SyncModal';
 import { EODReconciliationModal } from './components/EODReconciliationModal';
 import { LossModal } from './components/LossModal';
 
@@ -22,7 +26,44 @@ interface Transaction {
   time: string;
 }
 
+
+function getApiBaseUrl(): string {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, '');
+  }
+  const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost;
+  if (hostUri) {
+    const ip = hostUri.split(':')[0];
+    if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
+      return `http://${ip}:4000/api`;
+    }
+  }
+  return 'http://localhost:4000/api';
+}
+
 export default function App() {
+  // Shop Profile State (Fetched from SQLite database via CRDT LWW entities view)
+  const [shopName, setShopName] = useState<string>('Akash Chai & Poha Stall');
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchShopProfile = async () => {
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/vendor/shop`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ok && data.shopName && isMounted) {
+            setShopName(data.shopName);
+          }
+        }
+      } catch {
+        // Retain offline default when disconnected
+      }
+    };
+    fetchShopProfile();
+    return () => { isMounted = false; };
+  }, []);
+
   // Financial State
   const [drawerCash, setDrawerCash] = useState(2500);
   const [profitMin, setProfitMin] = useState(165);
@@ -37,10 +78,22 @@ export default function App() {
   const [activeSabotage, setActiveSabotage] = useState<'CLEAN' | 'NOISE' | 'CLOCK' | 'AIRGAP'>('CLEAN');
 
   // Modals & Navigation
+  const [showMorningStock, setShowMorningStock] = useState(false);
+  const [showUpiModal, setShowUpiModal] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
   const [showEOD, setShowEOD] = useState(false);
   const [showLoss, setShowLoss] = useState(false);
   const [loading, setLoading] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<'HOME' | 'TRANSFERS' | 'ANALYTICS'>('HOME');
+
+  // Real-time Daytime Listening & Confidence States
+  const [isListening, setIsListening] = useState(true);
+  const [latestHeardDialogue, setLatestHeardDialogue] = useState('Customer: 1 kilo tamatar do → Stall: ₹30');
+  const [confirmationPending, setConfirmationPending] = useState<{
+    item: string;
+    amount: number;
+    text: string;
+  } | null>(null);
 
   // Transactions
   const [transactions, setTransactions] = useState<Transaction[]>([
@@ -60,7 +113,7 @@ export default function App() {
     else if (scenario === 'FREEBIE') spoken = 'Customer: Thoda dhaniya mirchi upar se daal do na';
 
     try {
-      const res = await fetch('http://localhost:4000/api/vendor/utterance', {
+      const res = await fetch(`${getApiBaseUrl()}/vendor/utterance`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: spoken, clock: Date.now() })
@@ -135,13 +188,116 @@ export default function App() {
       {/* HEADER SECTION */}
       <View style={styles.topHeader}>
         <View style={styles.headerLeft}>
-          <Ionicons name="wallet-outline" size={18} color="#073B3A" style={styles.headerIcon} />
-          <Text style={styles.headerTitle}>Gross Balance</Text>
+          <Ionicons name="storefront-outline" size={18} color="#073B3A" style={styles.headerIcon} />
+          <Text style={styles.headerTitle} numberOfLines={1}>{shopName}</Text>
         </View>
         <Text style={styles.headerGrossAmount}>₹{drawerCash.toLocaleString('en-IN')}.00</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+        {/* DAYTIME FEATURE: SHIFT TOGGLE & LIVE LISTENING STATUS */}
+        <View style={styles.listeningStatusCard}>
+          <View style={styles.listeningTopRow}>
+            <View style={styles.listeningStatusIndicator}>
+              <View style={[styles.statusDot, isListening ? styles.statusDotActive : styles.statusDotPaused]} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.listeningStatusTitle}>
+                  {isListening ? 'Shop Open • Listening for Sales' : 'Shop Paused • Offline'}
+                </Text>
+                <Text style={styles.listeningStatusSub}>
+                  {isListening ? 'Safe in pocket — zero battery drain.' : 'Tap "Start Day" when ready to serve customers.'}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.shiftToggleBtn, isListening ? styles.shiftToggleBtnPause : styles.shiftToggleBtnStart]}
+              onPress={() => {
+                setIsListening(prev => {
+                  const nextState = !prev;
+                  if (nextState) {
+                    Alert.alert('Shop Open', 'Listening is active. Speak sales naturally.');
+                  } else {
+                    Alert.alert('Shop Paused', 'Microphone paused. Tap Start Day to resume.');
+                  }
+                  return nextState;
+                });
+              }}
+            >
+              <Ionicons
+                name={isListening ? 'pause-outline' : 'mic-outline'}
+                size={14}
+                color={isListening ? '#073B3A' : '#073B3A'}
+                style={{ marginRight: 4 }}
+              />
+              <Text style={styles.shiftToggleBtnText}>{isListening ? 'Pause' : 'Start Day'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {isListening && (
+            <View style={styles.dialogueBubble}>
+              <Ionicons name="chatbubble-ellipses-outline" size={13} color="#073B3A" style={{ marginRight: 6 }} />
+              <Text style={styles.dialogueBubbleText} numberOfLines={1}>
+                {latestHeardDialogue}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* DAYTIME FEATURE: 90% STT CONFIRMATION ALERT BANNER */}
+        {confirmationPending && (
+          <View style={styles.confirmBanner}>
+            <View style={styles.confirmHeaderRow}>
+              <View style={styles.confirmIconBox}>
+                <Ionicons name="ear-outline" size={20} color="#073B3A" />
+              </View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.confirmTitle}>Did you hear right?</Text>
+                <Text style={styles.confirmQuestion}>
+                  Did the customer ask for <Text style={{ fontWeight: '800', color: '#073B3A' }}>{confirmationPending.item}</Text> for <Text style={{ fontWeight: '800', color: '#073B3A' }}>₹{confirmationPending.amount}</Text>?
+                </Text>
+                <Text style={styles.confirmSpokenQuote}>“{confirmationPending.text}”</Text>
+              </View>
+            </View>
+
+            <View style={styles.confirmActionsRow}>
+              <TouchableOpacity
+                style={styles.confirmYesBtn}
+                onPress={() => {
+                  const amt = confirmationPending.amount;
+                  const newTx: Transaction = {
+                    id: `confirm-${Date.now()}`,
+                    title: `${confirmationPending.item} (Confirmed)`,
+                    category: 'Voice Sale',
+                    amount: amt,
+                    isCredit: true,
+                    time: 'Just now'
+                  };
+                  setTransactions(prev => [newTx, ...prev]);
+                  setDrawerCash(prev => prev + amt);
+                  setLatestHeardDialogue(`Confirmed: ${confirmationPending.item} → ₹${amt}`);
+                  setConfirmationPending(null);
+                  Alert.alert('Sale Confirmed', `Added ₹${amt} to today's sales.`);
+                }}
+              >
+                <Ionicons name="checkmark-circle" size={15} color="#073B3A" style={{ marginRight: 5 }} />
+                <Text style={styles.confirmYesText}>Yes, Correct (+₹{confirmationPending.amount})</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.confirmNoBtn}
+                onPress={() => {
+                  setConfirmationPending(null);
+                  Alert.alert('Sale Ignored', 'Discarded noisy input. No fake sale was added.');
+                }}
+              >
+                <Ionicons name="close-circle-outline" size={15} color="#6B7280" style={{ marginRight: 4 }} />
+                <Text style={styles.confirmNoText}>No, Ignore</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* 1. CONCEPTZILLA SIGNATURE WAVE CARDS (CAROUSEL) */}
         <ScrollView
@@ -238,41 +394,80 @@ export default function App() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.tealActionsRow}>
-          {/* ACTION 1: VOICE UTTERANCE */}
-          <TouchableOpacity
-            style={styles.tealCardItem}
-            onPress={() => handleSimulateUtterance('MULTI_POST')}
-            disabled={loading}
-          >
-            <View style={styles.limeIconBox}>
-              <Ionicons name="mic-outline" size={22} color="#073B3A" />
-            </View>
-            <Text style={styles.tealCardText}>{loading ? 'Adding...' : 'Voice sale'}</Text>
-          </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Stall Actions</Text>
+        <View style={styles.actionsGrid}>
+          {/* ROW 1: MORNING STOCK | VOICE SALE | ONLINE UPI */}
+          <View style={styles.actionsGridRow}>
+            <TouchableOpacity
+              style={styles.actionGridItem}
+              onPress={() => setShowMorningStock(true)}
+            >
+              <View style={styles.limeIconBox}>
+                <Ionicons name="cart-outline" size={20} color="#073B3A" />
+              </View>
+              <Text style={styles.actionGridTitle}>Add Stock</Text>
+              <Text style={styles.actionGridSub}>Mandi bill</Text>
+            </TouchableOpacity>
 
-          {/* ACTION 2: EOD RECONCILE */}
-          <TouchableOpacity
-            style={styles.tealCardItem}
-            onPress={() => setShowEOD(true)}
-          >
-            <View style={styles.limeIconBox}>
-              <Ionicons name="checkmark-done-outline" size={22} color="#073B3A" />
-            </View>
-            <Text style={styles.tealCardText}>Close register</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionGridItem}
+              onPress={() => handleSimulateUtterance('MULTI_POST')}
+              disabled={loading}
+            >
+              <View style={styles.limeIconBox}>
+                <Ionicons name="mic-outline" size={20} color="#073B3A" />
+              </View>
+              <Text style={styles.actionGridTitle}>{loading ? 'Adding...' : 'Voice Sale'}</Text>
+              <Text style={styles.actionGridSub}>Speak order</Text>
+            </TouchableOpacity>
 
-          {/* ACTION 3: SOUNDBOX FUSION */}
-          <TouchableOpacity
-            style={styles.tealCardItem}
-            onPress={handleSimulateSoundbox}
-          >
-            <View style={styles.limeIconBox}>
-              <Ionicons name="phone-portrait-outline" size={21} color="#073B3A" />
-            </View>
-            <Text style={styles.tealCardText}>Soundbox</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionGridItem}
+              onPress={() => setShowUpiModal(true)}
+            >
+              <View style={styles.limeIconBox}>
+                <Ionicons name="qr-code-outline" size={20} color="#073B3A" />
+              </View>
+              <Text style={styles.actionGridTitle}>Online UPI</Text>
+              <Text style={styles.actionGridSub}>Soundbox feed</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ROW 2: CLOSE REGISTER | SPOILED STOCK | SYNC PHONE */}
+          <View style={styles.actionsGridRow}>
+            <TouchableOpacity
+              style={styles.actionGridItem}
+              onPress={() => setShowEOD(true)}
+            >
+              <View style={styles.limeIconBox}>
+                <Ionicons name="checkmark-done-outline" size={20} color="#073B3A" />
+              </View>
+              <Text style={styles.actionGridTitle}>Close Stall</Text>
+              <Text style={styles.actionGridSub}>Count drawer</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionGridItem}
+              onPress={() => setShowLoss(true)}
+            >
+              <View style={styles.limeIconBox}>
+                <Ionicons name="pie-chart-outline" size={20} color="#073B3A" />
+              </View>
+              <Text style={styles.actionGridTitle}>Spoiled Stock</Text>
+              <Text style={styles.actionGridSub}>Heat & lunch</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionGridItem}
+              onPress={() => setShowSyncModal(true)}
+            >
+              <View style={styles.limeIconBox}>
+                <Ionicons name="phone-portrait-outline" size={20} color="#073B3A" />
+              </View>
+              <Text style={styles.actionGridTitle}>Sync Phone</Text>
+              <Text style={styles.actionGridSub}>Helper mesh</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <Text style={styles.sectionTitle}>System Security</Text>
@@ -365,7 +560,7 @@ export default function App() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={styles.sectionTitle}>Voice Scenarios</Text>
         <View style={styles.scenariosFlow}>
           <TouchableOpacity style={styles.scenarioPill} onPress={() => handleSimulateUtterance('MULTI_POST')}>
             <Text style={styles.scenarioPillText}>Add mixed sale</Text>
@@ -378,6 +573,18 @@ export default function App() {
           </TouchableOpacity>
           <TouchableOpacity style={styles.scenarioPill} onPress={() => handleSimulateUtterance('FREEBIE')}>
             <Text style={styles.scenarioPillText}>Add a free item</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.scenarioPill, { backgroundColor: '#F1FFE5', borderColor: '#073B3A', borderWidth: 1 }]}
+            onPress={() => {
+              setConfirmationPending({
+                item: '1 kg Tomatoes',
+                amount: 30,
+                text: '...ek kilo tamatar... (loud bus horn)'
+              });
+            }}
+          >
+            <Text style={[styles.scenarioPillText, { fontWeight: '800' }]}>👂 Muffled voice test</Text>
           </TouchableOpacity>
         </View>
 
@@ -433,12 +640,71 @@ export default function App() {
       </View>
 
       {/* MODALS */}
+      <MorningStockModal
+        visible={showMorningStock}
+        onClose={() => setShowMorningStock(false)}
+        apiBaseUrl={getApiBaseUrl()}
+        onStockAdded={(summary) => {
+          const cost = summary.totalCost;
+          if (summary.isCash) {
+            setDrawerCash(prev => Math.max(0, prev - cost));
+          }
+          const itemNames = summary.items.map(i => `${i.name} (${i.quantity} ${i.unit})`).join(', ');
+          setTransactions(prev => [
+            {
+              id: `stock-${Date.now()}`,
+              title: itemNames ? `Mandi Stock: ${itemNames}` : 'Mandi Morning Stock',
+              category: summary.isCash ? 'Mandi Cash Bill' : 'Mandi Udhaar Bill',
+              amount: cost,
+              isCredit: false,
+              time: 'Just now'
+            },
+            ...prev
+          ]);
+        }}
+      />
+
+      <UpiEventsModal
+        visible={showUpiModal}
+        onClose={() => setShowUpiModal(false)}
+        apiBaseUrl={getApiBaseUrl()}
+        onUpiPaymentConfirmed={(amount, isSale) => {
+          if (isSale) {
+            const newTx: Transaction = {
+              id: `upi-${Date.now()}`,
+              title: 'Paytm Soundbox UPI Received',
+              category: 'Soundbox Verified',
+              amount: amount,
+              isCredit: true,
+              time: 'Just now'
+            };
+            setTransactions(prev => [newTx, ...prev]);
+            setDrawerCash(prev => prev + amount);
+          }
+        }}
+      />
+
+      <SyncModal
+        visible={showSyncModal}
+        onClose={() => setShowSyncModal(false)}
+        apiBaseUrl={getApiBaseUrl()}
+        onSyncComplete={(count) => {
+          Alert.alert('Helper Sync', `Synchronized ${count} sales from nearby helper stall phone.`);
+        }}
+      />
+
       <EODReconciliationModal
         visible={showEOD}
         onClose={() => setShowEOD(false)}
+        apiBaseUrl={getApiBaseUrl()}
         confirmedUpiTotal={140}
         onReconciliationComplete={(res) => {
-          Alert.alert('Register closed', `${res.acceptedTransactions?.length} sales were confirmed. Difference: ₹${res.slackVariableValue}`);
+          if (res.acceptedTransactions) {
+            Alert.alert(
+              'Register Closed',
+              `${res.acceptedTransactions.length} sales confirmed. Real take-home profit: ₹${res.takeHomeProfit || 0}`
+            );
+          }
           setShowEOD(false);
         }}
       />
@@ -446,6 +712,7 @@ export default function App() {
       <LossModal
         visible={showLoss}
         onClose={() => setShowLoss(false)}
+        apiBaseUrl={getApiBaseUrl()}
         onCalculate={(r, f, t) => {
           setRotLoss(r);
           setFamilyLunch(f);
@@ -473,6 +740,8 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
   },
   headerIcon: {
     marginRight: 6,
@@ -491,6 +760,165 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 10,
+  },
+
+  /* DAYTIME LISTENING STATUS CARD */
+  listeningStatusCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 20,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  listeningTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  listeningStatusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  statusDotActive: {
+    backgroundColor: '#10B981',
+  },
+  statusDotPaused: {
+    backgroundColor: '#9CA3AF',
+  },
+  listeningStatusTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#073B3A',
+  },
+  listeningStatusSub: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginTop: 1,
+  },
+  shiftToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 14,
+  },
+  shiftToggleBtnPause: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  shiftToggleBtnStart: {
+    backgroundColor: '#E2FD52',
+  },
+  shiftToggleBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#073B3A',
+  },
+  dialogueBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  dialogueBubbleText: {
+    fontSize: 11,
+    color: '#374151',
+    fontWeight: '600',
+    flex: 1,
+  },
+
+  /* 90% STT CONFIRMATION BANNER */
+  confirmBanner: {
+    backgroundColor: '#F1FFE5',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: '#79AF00',
+    shadowColor: '#073B3A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  confirmHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  confirmIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#E2FD52',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#073B3A',
+    marginBottom: 2,
+  },
+  confirmQuestion: {
+    fontSize: 12,
+    color: '#1F2937',
+    lineHeight: 16,
+  },
+  confirmSpokenQuote: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    color: '#4B5563',
+    marginTop: 4,
+  },
+  confirmActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  confirmYesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E2FD52',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  confirmYesText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#073B3A',
+  },
+  confirmNoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 12,
+  },
+  confirmNoText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
   },
 
   /* 1. CONCEPTZILLA WAVE CARDS */
@@ -807,6 +1235,41 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 12,
     marginTop: 4,
+  },
+  /* 4. STALL ACTIONS GRID (2x3 Conceptzilla squircles) */
+  actionsGrid: {
+    marginBottom: 18,
+  },
+  actionsGridRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  actionGridItem: {
+    width: '31.5%',
+    backgroundColor: '#073B3A',
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    shadowColor: '#073B3A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  actionGridTitle: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  actionGridSub: {
+    fontSize: 10,
+    color: '#E2FD52',
+    fontWeight: '600',
+    marginTop: 2,
+    textAlign: 'center',
   },
   tealActionsRow: {
     flexDirection: 'row',

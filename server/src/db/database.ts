@@ -12,6 +12,7 @@ import {
   HlcTuple,
   LedgerEntryId,
   LedgerEntryInput,
+  EntityId,
   EntityInput,
   ResolvedEntityRow,
   ResolvedInventoryRow,
@@ -149,6 +150,7 @@ export class ProbabilisticLedgerDatabase {
     if (found.length !== REQUIRED_SCHEMA_OBJECTS.length) {
       throw new Error('SQLite initialization did not create the required schema objects');
     }
+    this.ensureDefaultShopEntity();
   }
 
   close(): void {
@@ -180,6 +182,48 @@ export class ProbabilisticLedgerDatabase {
   }
 
   // ── Standard reads ───────────────────────────────────────────────────────
+
+  ensureDefaultShopEntity(defaultName = 'Akash Chai & Poha Stall', defaultId = 'stall_primary'): void {
+    const existing = this.connection.prepare(
+      "SELECT 1 FROM entities WHERE entity_id = ? OR entity_type IN ('vendor', 'business') LIMIT 1"
+    ).get(defaultId);
+    if (!existing) {
+      const hlc = this.nextHlc();
+      this.upsertEntity({
+        entity_id: defaultId as EntityId,
+        canonical_name: defaultName,
+        entity_type: 'vendor',
+        aliases: ['Akash Poha', 'Chai Stall', 'My Shop'],
+        notes: 'Primary street vendor shop entity',
+        hlc,
+      });
+    }
+  }
+
+  getShopProfile(): { shopName: string; entityId: string } {
+    const row = this.connection.prepare(
+      "SELECT entity_id, canonical_name FROM resolved_entities WHERE entity_type IN ('vendor', 'business') ORDER BY updated_at DESC LIMIT 1"
+    ).get() as { entity_id: string; canonical_name: string } | undefined;
+
+    if (row && row.canonical_name) {
+      return { shopName: row.canonical_name, entityId: row.entity_id };
+    }
+    return { shopName: 'Akash Chai & Poha Stall', entityId: 'stall_primary' };
+  }
+
+  setShopName(shopName: string, entityId = 'stall_primary'): { shopName: string; entityId: string } {
+    const trimmed = shopName.trim();
+    const hlc = this.nextHlc();
+    this.upsertEntity({
+      entity_id: entityId as EntityId,
+      canonical_name: trimmed,
+      entity_type: 'vendor',
+      aliases: [trimmed],
+      notes: 'Vendor shop profile',
+      hlc,
+    });
+    return { shopName: trimmed, entityId };
+  }
 
   getResolvedEntity(entityId: string): ResolvedEntityRow | undefined {
     return this.connection.prepare('SELECT * FROM resolved_entities WHERE entity_id = ?').get(entityId) as ResolvedEntityRow | undefined;

@@ -10,5 +10,5 @@
   "ts-node": {
     "transpileOnly": true
   },
-  "extends": "expo/tsconfig.base"
+  "extends": "./mobile/node_modules/expo/tsconfig.base"
 }

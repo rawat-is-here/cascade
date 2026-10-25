@@ -264,14 +264,58 @@ vendorRouter.post('/eod/reconcile-batch', (req, res) => {
  * 5. Live Stall & CRDT State
  * GET /api/vendor/state
  */
+/**
+ * 5. Registered Shop Profile
+ * GET /api/vendor/shop
+ */
+vendorRouter.get('/shop', (req, res) => {
+  try {
+    const db = getDb();
+    const profile = db ? db.getShopProfile() : { shopName: 'Akash Chai & Poha Stall', entityId: 'stall_primary' };
+    res.json({ ok: true, shopName: profile.shopName, entityId: profile.entityId });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * Update Shop Name
+ * POST /api/vendor/shop
+ */
+vendorRouter.post('/shop', (req, res) => {
+  try {
+    const { shopName, entityId } = req.body;
+    if (!shopName || typeof shopName !== 'string') {
+      return res.status(400).json({ ok: false, error: 'shopName string is required' });
+    }
+    const db = getDb();
+    if (db) {
+      const result = db.setShopName(shopName, entityId);
+      broadcast({ type: 'shop_updated', ...result });
+      return res.json({ ok: true, ...result });
+    }
+    return res.json({ ok: true, shopName: shopName.trim(), entityId: entityId || 'stall_primary' });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * 6. Live Stall & CRDT State
+ * GET /api/vendor/state
+ */
 vendorRouter.get('/state', (req, res) => {
   try {
     const accounts = crdtLedger.getAllAccounts();
     const inventory = wholesaleManager.getAllInventory();
     const conservation = crdtLedger.verifyConservation();
+    const db = getDb();
+    const profile = db ? db.getShopProfile() : { shopName: 'Akash Chai & Poha Stall', entityId: 'stall_primary' };
 
     res.json({
       ok: true,
+      shopName: profile.shopName,
+      entityId: profile.entityId,
       balances: accounts,
       inventory,
       bufferedTurns: shiftTranscripts.length,
