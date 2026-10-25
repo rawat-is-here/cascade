@@ -6,12 +6,14 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   apiBaseUrl?: string;
-  onCalculate?: (spoilage: number, eating: number, theft: number) => void;
+  initialCommodity?: string;
+  initialMissingKg?: number;
+  onCalculate?: (spoilage: number, eating: number, theft: number, commodity?: string, missingKg?: number) => void;
 }
 
-export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, onCalculate }) => {
-  const [commodity, setCommodity] = useState('Tomatoes');
-  const [missingKg, setMissingKg] = useState('4.0');
+export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, initialCommodity = 'Tomatoes', initialMissingKg = 4.0, onCalculate }) => {
+  const [commodity, setCommodity] = useState(initialCommodity);
+  const [missingKg, setMissingKg] = useState(initialMissingKg.toString());
   const [temp, setTemp] = useState('39');
   const [hoursExposed, setHoursExposed] = useState('7');
   const [result, setResult] = useState<{ spoilage: number; eating: number; theft: number } | null>({
@@ -23,6 +25,7 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, onCal
   const handleCompute = () => {
     const t = parseFloat(temp) || 35;
     const h = parseFloat(hoursExposed) || 6;
+    const mKg = parseFloat(missingKg) || 4.0;
     
     // Bayesian temperature-accelerated exponential rot factor
     const rotBase = Math.min(75, Math.max(15, (t - 25) * 3.2 + (h * 1.8)));
@@ -38,7 +41,7 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, onCal
 
     setResult(computed);
     if (onCalculate) {
-      onCalculate(computed.spoilage, computed.eating, computed.theft);
+      onCalculate(computed.spoilage, computed.eating, computed.theft, commodity, mKg);
     }
   };
 

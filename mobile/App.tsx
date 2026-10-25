@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Constants from 'expo-constants';
 import {
   StyleSheet,
@@ -15,6 +15,7 @@ import { UpiEventsModal } from './components/UpiEventsModal';
 import { SyncModal } from './components/SyncModal';
 import { EODReconciliationModal } from './components/EODReconciliationModal';
 import { LossModal } from './components/LossModal';
+import { MandiOcrModal } from './components/MandiOcrModal';
 import { BlendedPrompt, PromptInfo } from './components/BlendedPrompt';
 
 interface Transaction {
@@ -64,12 +65,38 @@ export default function App() {
     return () => { isMounted = false; };
   }, []);
 
-  // Financial State
-  const [drawerCash, setDrawerCash] = useState(2500);
-  const [profitMin, setProfitMin] = useState(165);
-  const [profitMax, setProfitMax] = useState(215);
+  // Baseline opening cash float & Dynamic Financial State
+  const openingFloat = 500;
 
-  // Spoilage Attribution
+  // Transactions (Single Source of Truth)
+  const [transactions, setTransactions] = useState<Transaction[]>([
+    { id: '1', title: 'Tamatar (3kg) + Sharma Ji', category: 'Vegetable Mandi', amount: 180, isCredit: true, time: '12:42 PM' },
+    { id: '2', title: 'Paytm Soundbox UPI Chime', category: 'Digital UPI', amount: 140, isCredit: true, time: '12:38 PM' },
+    { id: '3', title: 'Kerosene & Stall Fuel', category: 'Stall Supplies', amount: 60, isCredit: false, time: '11:15 AM' },
+    { id: '4', title: 'Poha Plates Sale (x7)', category: 'Food Counter', amount: 140, isCredit: true, time: '10:05 AM' }
+  ]);
+
+  // Dynamic calculations derived from live transactions
+  const totalSales = useMemo(() => {
+    return transactions.filter(t => t.isCredit).reduce((acc, t) => acc + t.amount, 0);
+  }, [transactions]);
+
+  const totalExpenses = useMemo(() => {
+    return transactions.filter(t => !t.isCredit).reduce((acc, t) => acc + t.amount, 0);
+  }, [transactions]);
+
+  const netOperatingBalance = totalSales - totalExpenses;
+  const liveCashInDrawer = openingFloat + netOperatingBalance;
+
+  const dynamicUpiTotal = useMemo(() => {
+    return transactions
+      .filter(t => t.isCredit && (t.category.toLowerCase().includes('upi') || t.title.toLowerCase().includes('upi') || t.category.toLowerCase().includes('soundbox')))
+      .reduce((acc, t) => acc + t.amount, 0);
+  }, [transactions]);
+
+  // Dynamic Spoilage Attribution State
+  const [lossCommodity, setLossCommodity] = useState('Tomatoes');
+  const [lossTotalKg, setLossTotalKg] = useState(4.0);
   const [rotLoss, setRotLoss] = useState(43.8);
   const [familyLunch, setFamilyLunch] = useState(47.4);
   const [theftLoss, setTheftLoss] = useState(8.8);
@@ -78,6 +105,7 @@ export default function App() {
   const [activeSabotage, setActiveSabotage] = useState<'CLEAN' | 'NOISE' | 'CLOCK' | 'AIRGAP'>('CLEAN');
 
   // Modals & Navigation
+  const [showMandiOcr, setShowMandiOcr] = useState(false);
   const [showMorningStock, setShowMorningStock] = useState(false);
   const [showUpiModal, setShowUpiModal] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
@@ -100,14 +128,6 @@ export default function App() {
   const showPrompt = (info: PromptInfo) => {
     setActivePrompt({ ...info });
   };
-
-  // Transactions
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    { id: '1', title: 'Tamatar (3kg) + Sharma Ji', category: 'Vegetable Mandi', amount: 180, isCredit: true, time: '12:42 PM' },
-    { id: '2', title: 'Paytm Soundbox UPI Chime', category: 'Digital UPI', amount: 140, isCredit: true, time: '12:38 PM' },
-    { id: '3', title: 'Kerosene & Stall Fuel', category: 'Stall Supplies', amount: 60, isCredit: false, time: '11:15 AM' },
-    { id: '4', title: 'Poha Plates Sale (x7)', category: 'Food Counter', amount: 140, isCredit: true, time: '10:05 AM' }
-  ]);
 
   // Voice Utterance Handler
   const handleSimulateUtterance = async (scenario: 'MULTI_POST' | 'NEGOTIATION' | 'WALKAWAY' | 'FREEBIE') => {
@@ -153,7 +173,6 @@ export default function App() {
           time: 'Just now'
         };
         setTransactions(prev => [newTx, ...prev]);
-        setDrawerCash(prev => prev + amt);
         showPrompt({
           badge: 'Voice Sale',
           title: scenario === 'NEGOTIATION' ? 'Agreed at ₹45' : 'Voice Sale Recorded: +₹180',
@@ -191,7 +210,6 @@ export default function App() {
           time: 'Just now'
         };
         setTransactions(prev => [newTx, ...prev]);
-        setDrawerCash(prev => prev + amt);
         showPrompt({
           badge: 'Voice Sale',
           title: scenario === 'NEGOTIATION' ? 'Agreed at ₹45' : 'Voice Sale Recorded: +₹180',
@@ -224,14 +242,17 @@ export default function App() {
   };
 
   const handleReset = () => {
-    setDrawerCash(2500);
-    setProfitMin(165);
-    setProfitMax(215);
+    setTransactions([
+      { id: '1', title: 'Tamatar (3kg) + Sharma Ji', category: 'Vegetable Mandi', amount: 180, isCredit: true, time: '12:42 PM' },
+      { id: '2', title: 'Paytm Soundbox UPI Chime', category: 'Digital UPI', amount: 140, isCredit: true, time: '12:38 PM' },
+      { id: '3', title: 'Kerosene & Stall Fuel', category: 'Stall Supplies', amount: 60, isCredit: false, time: '11:15 AM' },
+      { id: '4', title: 'Poha Plates Sale (x7)', category: 'Food Counter', amount: 140, isCredit: true, time: '10:05 AM' }
+    ]);
     setActiveSabotage('CLEAN');
     showPrompt({
       badge: 'Stall Reset',
       title: 'Sample Baseline Restored',
-      description: 'Today’s cash drawer reset to morning baseline ₹2,500.',
+      description: `Today’s register reset to morning opening float ₹${openingFloat}.`,
       type: 'info',
       icon: 'refresh-outline'
     });
@@ -248,22 +269,20 @@ export default function App() {
           <Ionicons name="storefront-outline" size={18} color="#073B3A" style={styles.headerIcon} />
           <Text style={styles.headerTitle} numberOfLines={1}>{shopName}</Text>
         </View>
-        <Text style={styles.headerGrossAmount}>₹{drawerCash.toLocaleString('en-IN')}.00</Text>
+        <Text style={styles.headerGrossAmount}>₹{liveCashInDrawer.toLocaleString('en-IN')}.00</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-        {/* DAYTIME FEATURE: SHIFT TOGGLE & LIVE LISTENING STATUS */}
-        <View style={styles.listeningStatusCard}>
-          <View style={styles.listeningTopRow}>
-            <View style={styles.listeningStatusIndicator}>
-              <View style={[styles.statusDot, isListening ? styles.statusDotActive : styles.statusDotPaused]} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.listeningStatusTitle}>
-                  {isListening ? 'Shop Open • Listening for Sales' : 'Shop Paused • Offline'}
-                </Text>
-                <Text style={styles.listeningStatusSub}>
-                  {isListening ? 'Safe in pocket — zero battery drain.' : 'Tap "Start Day" when ready to serve customers.'}
+        {/* DAYTIME FEATURE: SHIFT TOGGLE & LIVE LISTENING STATUS (CONCEPTZILLA SIGNATURE CARD) */}
+        <View style={styles.listeningCard}>
+          <View style={styles.listeningCardHeader}>
+            <View style={styles.listeningHeaderLeft}>
+              <Text style={styles.listeningMicroHeader}>STALL AUDIO MONITOR</Text>
+              <View style={[styles.listeningStatusPill, isListening ? styles.listeningStatusPillActive : styles.listeningStatusPillPaused]}>
+                <View style={[styles.statusDot, isListening ? styles.statusDotActive : styles.statusDotPaused]} />
+                <Text style={[styles.listeningStatusPillText, isListening ? styles.listeningStatusPillTextActive : styles.listeningStatusPillTextPaused]}>
+                  {isListening ? 'LIVE AUDIO' : 'PAUSED'}
                 </Text>
               </View>
             </View>
@@ -297,19 +316,35 @@ export default function App() {
               <Ionicons
                 name={isListening ? 'pause-outline' : 'mic-outline'}
                 size={14}
-                color={isListening ? '#073B3A' : '#073B3A'}
+                color="#073B3A"
                 style={{ marginRight: 4 }}
               />
               <Text style={styles.shiftToggleBtnText}>{isListening ? 'Pause' : 'Start Day'}</Text>
             </TouchableOpacity>
           </View>
 
+          <View style={styles.listeningBodyBlock}>
+            <Text style={styles.listeningHeroTitle}>
+              {isListening ? 'Shop Open • Listening for Sales' : 'Shop Paused • Offline'}
+            </Text>
+            <Text style={styles.listeningHeroSub}>
+              {isListening
+                ? 'Passive continuous background listening • Zero battery drain'
+                : 'Microphone asleep • Tap Start Day when ready to serve customers'}
+            </Text>
+          </View>
+
           {isListening && (
-            <View style={styles.dialogueBubble}>
-              <Ionicons name="chatbubble-ellipses-outline" size={13} color="#073B3A" style={{ marginRight: 6 }} />
-              <Text style={styles.dialogueBubbleText} numberOfLines={1}>
-                {latestHeardDialogue}
-              </Text>
+            <View style={styles.liveAudioSnippetBar}>
+              <View style={styles.audioWaveGlyph}>
+                <Ionicons name="chatbubble-ellipses-outline" size={13} color="#073B3A" />
+              </View>
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.audioSnippetLabel}>LATEST HEARD SPEECH</Text>
+                <Text style={styles.audioSnippetText} numberOfLines={1}>
+                  {latestHeardDialogue}
+                </Text>
+              </View>
             </View>
           )}
         </View>
@@ -344,7 +379,6 @@ export default function App() {
                     time: 'Just now'
                   };
                   setTransactions(prev => [newTx, ...prev]);
-                  setDrawerCash(prev => prev + amt);
                   setLatestHeardDialogue(`Confirmed: ${confirmationPending.item} → ₹${amt}`);
                   setConfirmationPending(null);
                   showPrompt({
@@ -385,7 +419,7 @@ export default function App() {
           <View style={styles.balanceHeaderRow}>
             <View>
               <Text style={styles.periodHeader}>TODAY’S NET BALANCE</Text>
-              <Text style={styles.balanceHeroAmount}>₹{drawerCash.toLocaleString('en-IN')}.00</Text>
+              <Text style={styles.balanceHeroAmount}>₹{liveCashInDrawer.toLocaleString('en-IN')}.00</Text>
             </View>
             <View style={styles.balanceLivePill}>
               <View style={styles.liveDot} />
@@ -398,9 +432,9 @@ export default function App() {
               <View style={styles.arrowCircle}>
                 <Text style={styles.arrowSymbol}>↑</Text>
               </View>
-              <Text style={styles.periodLabel}>Money in</Text>
+              <Text style={styles.periodLabel}>Money in (Total sales)</Text>
             </View>
-            <Text style={styles.periodValueCredit}>+₹2,213.22</Text>
+            <Text style={styles.periodValueCredit}>+₹{totalSales.toLocaleString('en-IN')}.00</Text>
           </View>
 
           <View style={styles.periodRow}>
@@ -408,9 +442,9 @@ export default function App() {
               <View style={styles.arrowCircle}>
                 <Text style={styles.arrowSymbol}>↓</Text>
               </View>
-              <Text style={styles.periodLabel}>Money out</Text>
+              <Text style={styles.periodLabel}>Money out (Expenses)</Text>
             </View>
-            <Text style={styles.periodValueDebit}>-₹1,821.35</Text>
+            <Text style={styles.periodValueDebit}>-₹{totalExpenses.toLocaleString('en-IN')}.00</Text>
           </View>
 
           <View style={[styles.periodRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
@@ -418,9 +452,56 @@ export default function App() {
               <View style={[styles.arrowCircle, { borderColor: '#073B3A' }]}>
               <Ionicons name="trending-up-outline" size={12} color="#073B3A" />
               </View>
-              <Text style={[styles.periodLabel, { fontWeight: '700' }]}>Net balance</Text>
+              <Text style={[styles.periodLabel, { fontWeight: '700' }]}>Net operating balance</Text>
             </View>
-            <Text style={styles.periodValueAccrual}>+₹391.87</Text>
+            <Text style={styles.periodValueAccrual}>
+              {netOperatingBalance >= 0 ? '+' : '-'}₹{Math.abs(netOperatingBalance).toLocaleString('en-IN')}.00
+            </Text>
+          </View>
+        </View>
+
+        {/* WHOLESALE MANDI SLIP ENTRY CARD (CONCEPTZILLA EXACT CARD STRUCTURE) */}
+        <View style={styles.wholesaleSlipCard}>
+          <View style={styles.wholesaleCardHeader}>
+            <Text style={styles.wholesaleMicroHeader}>WHOLESALE MANDI SLIP ENTRY</Text>
+            <View style={styles.ocrHardwareBadge}>
+              <Ionicons name="camera" size={11} color="#376300" style={{ marginRight: 4 }} />
+              <Text style={styles.ocrHardwareBadgeText}>OCR CAMERA HOOK</Text>
+            </View>
+          </View>
+
+          <Text style={styles.wholesaleCardTitle}>Wholesale Mandi Slip & Stock</Text>
+          <Text style={styles.wholesaleCardSub}>
+            Snap physical paper mandi slips to calibrate wholesale COGS cost basis via optical OCR recognition.
+          </Text>
+
+          <View style={styles.wholesaleBasisRow}>
+            <View style={styles.wholesaleBasisLeft}>
+              <Text style={styles.wholesaleBasisLabel}>ACTIVE COST BASIS (COGS)</Text>
+              <Text style={styles.wholesaleBasisValue}>₹1,720.00 Ingested Basis</Text>
+              <Text style={styles.wholesaleSupplierText}>Supplier: Azadpur Mandi • 3 Items (120 kg)</Text>
+            </View>
+            <View style={styles.limeIconBox}>
+              <Ionicons name="receipt-outline" size={20} color="#073B3A" />
+            </View>
+          </View>
+
+          <View style={styles.wholesaleButtonsRow}>
+            <TouchableOpacity
+              style={styles.scanSlipPrimaryBtn}
+              onPress={() => setShowMandiOcr(true)}
+            >
+              <Ionicons name="scan-outline" size={15} color="#073B3A" style={{ marginRight: 6 }} />
+              <Text style={styles.scanSlipPrimaryText}>Scan Mandi Slip (OCR)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.manualSlipSecondaryBtn}
+              onPress={() => setShowMorningStock(true)}
+            >
+              <Ionicons name="add-outline" size={15} color="#374151" style={{ marginRight: 4 }} />
+              <Text style={styles.manualSlipSecondaryText}>Manual Bill</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -565,8 +646,8 @@ export default function App() {
               <View style={[styles.donutSector, { borderColor: '#073B3A' }]} />
               <View style={[styles.donutSectorInner, { borderColor: '#E2FD52' }]} />
               <View style={styles.donutHole}>
-                <Text style={styles.donutTotalKg}>4.0 kg</Text>
-                <Text style={styles.donutSubText}>Tomatoes</Text>
+                <Text style={styles.donutTotalKg}>{lossTotalKg.toFixed(1)} kg</Text>
+                <Text style={styles.donutSubText}>{lossCommodity}</Text>
               </View>
             </View>
 
@@ -574,17 +655,17 @@ export default function App() {
             <View style={styles.donutLegend}>
               <View style={styles.donutLegendItem}>
                 <View style={[styles.legendDot, { backgroundColor: '#073B3A' }]} />
-                <Text style={styles.legendName}>Heat Rot: <Text style={styles.legendBold}>{rotLoss}%</Text></Text>
+                <Text style={styles.legendName}>Heat Rot: <Text style={styles.legendBold}>{rotLoss}% ({((lossTotalKg * rotLoss) / 100).toFixed(1)} kg)</Text></Text>
               </View>
 
               <View style={styles.donutLegendItem}>
                 <View style={[styles.legendDot, { backgroundColor: '#E2FD52' }]} />
-                <Text style={styles.legendName}>Family Food: <Text style={styles.legendBold}>{familyLunch}%</Text></Text>
+                <Text style={styles.legendName}>Family Food: <Text style={styles.legendBold}>{familyLunch}% ({((lossTotalKg * familyLunch) / 100).toFixed(1)} kg)</Text></Text>
               </View>
 
               <View style={styles.donutLegendItem}>
                 <View style={[styles.legendDot, { backgroundColor: '#D1D5DB' }]} />
-                <Text style={styles.legendName}>Theft / Loss: <Text style={styles.legendBold}>{theftLoss}%</Text></Text>
+                <Text style={styles.legendName}>Theft / Loss: <Text style={styles.legendBold}>{theftLoss}% ({((lossTotalKg * theftLoss) / 100).toFixed(1)} kg)</Text></Text>
               </View>
             </View>
           </View>
@@ -682,9 +763,6 @@ export default function App() {
         apiBaseUrl={getApiBaseUrl()}
         onStockAdded={(summary) => {
           const cost = summary.totalCost;
-          if (summary.isCash) {
-            setDrawerCash(prev => Math.max(0, prev - cost));
-          }
           const itemNames = summary.items.map(i => `${i.name} (${i.quantity} ${i.unit})`).join(', ');
           setTransactions(prev => [
             {
@@ -722,7 +800,6 @@ export default function App() {
               time: 'Just now'
             };
             setTransactions(prev => [newTx, ...prev]);
-            setDrawerCash(prev => prev + amount);
             showPrompt({
               badge: 'UPI Verified',
               title: `Received +₹${amount.toLocaleString('en-IN')}`,
@@ -753,7 +830,10 @@ export default function App() {
         visible={showEOD}
         onClose={() => setShowEOD(false)}
         apiBaseUrl={getApiBaseUrl()}
-        confirmedUpiTotal={140}
+        confirmedUpiTotal={dynamicUpiTotal}
+        initialClosingCash={liveCashInDrawer}
+        initialCashExpenses={totalExpenses}
+        initialOpeningFloat={openingFloat}
         onReconciliationComplete={(res) => {
           if (res.acceptedTransactions) {
             showPrompt({
@@ -772,10 +852,41 @@ export default function App() {
         visible={showLoss}
         onClose={() => setShowLoss(false)}
         apiBaseUrl={getApiBaseUrl()}
-        onCalculate={(r, f, t) => {
+        initialCommodity={lossCommodity}
+        initialMissingKg={lossTotalKg}
+        onCalculate={(r, f, t, c, mKg) => {
           setRotLoss(r);
           setFamilyLunch(f);
           setTheftLoss(t);
+          if (c) setLossCommodity(c);
+          if (mKg) setLossTotalKg(mKg);
+        }}
+      />
+
+      <MandiOcrModal
+        visible={showMandiOcr}
+        onClose={() => setShowMandiOcr(false)}
+        apiBaseUrl={getApiBaseUrl()}
+        onSlipIngested={(summary) => {
+          const cost = summary.totalCost;
+          setTransactions(prev => [
+            {
+              id: `mandi-ocr-${Date.now()}`,
+              title: `Mandi OCR: ${summary.supplier}`,
+              category: 'Wholesale Mandi COGS',
+              amount: cost,
+              isCredit: false,
+              time: 'Just now'
+            },
+            ...prev
+          ]);
+          showPrompt({
+            badge: 'Mandi Slip Ingested',
+            title: `OCR Slip Recorded: -₹${cost.toLocaleString('en-IN')}`,
+            description: `Ingested ${summary.itemsCount} bulk items into wholesale ledger. Zero retail preset prices.`,
+            type: 'success',
+            icon: 'camera-outline'
+          });
         }}
       />
     </SafeAreaView>
@@ -821,31 +932,66 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
 
-  /* DAYTIME LISTENING STATUS CARD */
-  listeningStatusCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 20,
-    padding: 14,
-    marginBottom: 12,
+  /* DAYTIME LISTENING STATUS CARD (CONCEPTZILLA EXACT CARD STRUCTURE) */
+  listeningCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#DDECE7',
+    marginBottom: 18,
+    shadowColor: '#073B3A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.07,
+    shadowRadius: 16,
+    elevation: 3,
   },
-  listeningTopRow: {
+  listeningCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
-  listeningStatusIndicator: {
+  listeningHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    marginRight: 10,
+  },
+  listeningMicroHeader: {
+    fontSize: 11,
+    color: '#6E827D',
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginRight: 8,
+  },
+  listeningStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  listeningStatusPillActive: {
+    backgroundColor: '#F1FFE5',
+  },
+  listeningStatusPillPaused: {
+    backgroundColor: '#F3F4F6',
+  },
+  listeningStatusPillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  listeningStatusPillTextActive: {
+    color: '#376300',
+  },
+  listeningStatusPillTextPaused: {
+    color: '#6B7280',
   },
   statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 10,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 5,
   },
   statusDotActive: {
     backgroundColor: '#10B981',
@@ -853,27 +999,16 @@ const styles = StyleSheet.create({
   statusDotPaused: {
     backgroundColor: '#9CA3AF',
   },
-  listeningStatusTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#073B3A',
-  },
-  listeningStatusSub: {
-    fontSize: 10,
-    color: '#6B7280',
-    marginTop: 1,
-  },
   shiftToggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#E2FD52',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 14,
   },
   shiftToggleBtnPause: {
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    backgroundColor: '#E2FD52',
   },
   shiftToggleBtnStart: {
     backgroundColor: '#E2FD52',
@@ -883,22 +1018,171 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#073B3A',
   },
-  dialogueBubble: {
+  listeningBodyBlock: {
+    marginBottom: 10,
+  },
+  listeningHeroTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#073B3A',
+    letterSpacing: -0.2,
+  },
+  listeningHeroSub: {
+    fontSize: 11,
+    color: '#6E827D',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  liveAudioSnippetBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    marginTop: 10,
+    backgroundColor: '#F8FCF9',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2EFE9',
+    marginTop: 4,
   },
-  dialogueBubbleText: {
+  audioWaveGlyph: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#E2FD52',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  audioSnippetLabel: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#6E827D',
+    letterSpacing: 0.6,
+  },
+  audioSnippetText: {
     fontSize: 11,
-    color: '#374151',
-    fontWeight: '600',
+    color: '#073B3A',
+    fontWeight: '700',
+    marginTop: 1,
+  },
+
+  /* WHOLESALE MANDI SLIP CARD (CONCEPTZILLA EXACT CARD STRUCTURE) */
+  wholesaleSlipCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#DDECE7',
+    marginBottom: 18,
+    shadowColor: '#073B3A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.07,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  wholesaleCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  wholesaleMicroHeader: {
+    fontSize: 11,
+    color: '#6E827D',
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  ocrHardwareBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1FFE5',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  ocrHardwareBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#376300',
+    letterSpacing: 0.5,
+  },
+  wholesaleCardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#073B3A',
+    letterSpacing: -0.2,
+  },
+  wholesaleCardSub: {
+    fontSize: 11,
+    color: '#6E827D',
+    marginTop: 2,
+    fontWeight: '500',
+    lineHeight: 16,
+  },
+  wholesaleBasisRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F8FCF9',
+    borderRadius: 16,
+    padding: 12,
+    marginTop: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2EFE9',
+  },
+  wholesaleBasisLeft: {
     flex: 1,
+  },
+  wholesaleBasisLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#6E827D',
+    letterSpacing: 0.5,
+  },
+  wholesaleBasisValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#073B3A',
+    marginTop: 2,
+  },
+  wholesaleSupplierText: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  wholesaleButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  scanSlipPrimaryBtn: {
+    flex: 1.3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E2FD52',
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  scanSlipPrimaryText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#073B3A',
+  },
+  manualSlipSecondaryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  manualSlipSecondaryText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
   },
 
   /* 90% STT CONFIRMATION BANNER */
