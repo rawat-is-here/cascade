@@ -27,6 +27,14 @@ const COLLOQUIAL_UNIT_WEIGHTS_KG: Record<string, number> = {
   'adha': 0.5,
   'ek kilo': 1.0,
   '1 kilo': 1.0,
+  'do kilo': 2.0,
+  '2 kilo': 2.0,
+  'teen kilo': 3.0,
+  '3 kilo': 3.0,
+  'char kilo': 4.0,
+  '4 kilo': 4.0,
+  'paanch kilo': 5.0,
+  '5 kilo': 5.0,
   'dedh kilo': 1.5,
   'dhai kilo': 2.5,
   
@@ -43,6 +51,17 @@ const COLLOQUIAL_UNIT_WEIGHTS_KG: Record<string, number> = {
   'teen paav': 0.75,
   'teen pao': 0.75,
   'char paav': 1.0,
+
+  // Counts / Pieces / Plates
+  'ek plate': 1.0,
+  'do plate': 2.0,
+  'teen plate': 3.0,
+  'ek chai': 1.0,
+  'do chai': 2.0,
+  'teen chai': 3.0,
+  'ek samosa': 1.0,
+  'do samosa': 2.0,
+  'teen samosa': 3.0,
 
   // Gram variants
   'sau gram': 0.1,
@@ -131,8 +150,8 @@ export class IndicNumericLexer {
 
     // 4. Extract Colloquial Weights ("aadha kilo", "ek paav", "2 paav", "2 kilo")
     if (!isValueDriven) {
-      // Check numeric + unit patterns first ("2 paav", "2 kilo", "500 gram", "3 plate")
-      const qtyMatch = text.match(/(\d+(?:\.\d+)?)\s*(kilo|kg|gm|gram|pao|paav|pav|plate|cup|glass|piece|dozen)/i);
+      // Check numeric + unit patterns first ("2 paav", "2 kilo", "500 gram", "3 plate", "3 samosa")
+      const qtyMatch = text.match(/(\d+(?:\.\d+)?)\s*(kilo|kg|gm|gram|pao|paav|pav|plate|cup|glass|piece|dozen|samosa|samose|chai|poha|pohe)/i);
       if (qtyMatch) {
         const num = parseFloat(qtyMatch[1]);
         const u = qtyMatch[2].toLowerCase();
@@ -165,15 +184,15 @@ export class IndicNumericLexer {
       }
     }
 
-    // 5. Extract Explicit Price / Rate ("40 ka diya", "30 lagao", "180 mein", "rate 40")
+    // 5. Extract Explicit Price / Rate ("40 ka diya", "30 lagao", "180 mein", "rate 40", "5 karo")
     if (price === undefined) {
-      const priceRegex = /(?:(?:rs\.?|inr|₹)\s*(\d+(?:\.\d+)?))|(\d+(?:\.\d+)?)\s*(?:ka\s*diya|ka\s*hai|mein|me|lagao|kar\s*do|ka\s*rate|rupaye|rs|bhav)/i;
+      const priceRegex = /(?:(?:rs\.?|inr|₹)\s*(\d+(?:\.\d+)?))|(\d+(?:\.\d+)?)\s*(?:ka\s*diya|ka\s*hai|mein|me|lagao|kar\s*do|ka\s*rate|rupaye|rs|bhav|karo|me\s*do|me\s*de|de\s*raha)/i;
       const pMatch = text.match(priceRegex);
       if (pMatch) {
         price = parseFloat(pMatch[1] || pMatch[2]);
       } else {
         // Fallback: standalone number when preceded or followed by rate-indicative words
-        const standaloneMatch = text.match(/\b(\d{2,4})\b/);
+        const standaloneMatch = text.match(/\b(\d+)\b/);
         if (standaloneMatch) {
           price = parseFloat(standaloneMatch[1]);
         }

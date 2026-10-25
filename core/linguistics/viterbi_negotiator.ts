@@ -47,32 +47,33 @@ export class ViterbiNegotiatorEngine {
     ],
     'VENDOR_QUOTE': [
       '40 ka diya', 'chalis rupaye', 'rate 40 hai', 'tees rupaye kilo', 'bees ka ek kilo',
-      '40 lagega', 'saaf maal hai 40'
+      '40 lagega', 'saaf maal hai 40', 'rupaye ho gaye', '25 rupaye ho gaye'
     ],
     'CUSTOMER_COUNTER': [
       'nahi 30 ka lagao', '30 me nipta do', 'kam karo bhaiya', 'padosi 25 me de raha hai',
-      'kuch to kam karo', '30 se ek rupya upar nahi doonga', '30 me de do', '25 lagao'
+      'kuch to kam karo', '30 se ek rupya upar nahi doonga', '30 me de do', '25 lagao',
+      'chalo 25 me de do', 'roz to aate hain', '25 me do'
     ],
     'VENDOR_CONCESSION': [
       'ok', 'theek hai', 'chalo le jao', 'de diya', 'baandh do', 'daal diya',
-      'le lo', 'chal theek hai', 'ha le ja', 'ok done'
+      'le lo', 'chal theek hai', 'ha le ja', 'ok done', 'chalo baandh diya', 'theek hai le lo'
     ],
     'VENDOR_REJECTION': [
       'nahi hoga', 'nahi jam raha', 'kharid hi 32 ki hai', '35 se kam nahi',
-      'chhod do', 'itne me nahi baithta', 'nahi aayega'
+      'chhod do', 'itne me nahi baithta', 'nahi aayega', 'nahi hoga bhaiya', 'isse kam me nahi hoga'
     ],
     'QUANTITY_SPEC': [
       'aadha kilo kar do', 'ek kilo daalo', '2 paav de do', 'dedh kilo pack karo',
-      'ek kilo kar do', 'paav de do', '2 kilo daal do', 'aadha kilo'
+      'ek kilo kar do', 'paav de do', '2 kilo daal do', 'aadha kilo', 'do kilo kar do', '3 samosa kar do'
     ],
     'VALUE_ORDER': [
-      '50 rupaye ka de do', '100 ka aalu do', 'bees rupaye ka tamatar', '50 ka aalu'
+      '50 rupaye ka de do', '100 ka aalu do', 'bees rupaye ka tamatar', '50 ka aalu', '50 rupaye ka'
     ],
     'FREEBIE_REQUEST': [
-      'thoda dhaniya mirchi daal do', 'mirchi upar se do', 'nimbu free me do', 'thoda kadi patta'
+      'thoda dhaniya mirchi daal do', 'mirchi upar se do', 'nimbu free me do', 'thoda kadi patta', 'extra chatni'
     ],
     'WALK_AWAY': [
-      'rehne do bhaiya', 'aage dekhenge', 'nahi chahiye', 'bohot mehenga hai',
+      'rehne do bhaiya', 'aage dekhenge', 'nahi chahiye', 'bohot mehenga hai', 'rehne do bhaiya bohot mehenga hai', 'aage se le lenge', 'chhod do bhai',
       'chalo aage chalte hain', 'chhod do rehne do'
     ]
   };
@@ -341,6 +342,11 @@ export class ViterbiNegotiatorEngine {
       session.currentQuotedRate = entities.price;
       session.finalAgreedRate = entities.price;
       explanation = `Vendor quoted initial rate: ₹${entities.price}/${session.unit || 'kg'}`;
+      if (session.quantity && session.quantity > 0) {
+        session.derivedTotalAmount = Math.round(entities.price * session.quantity * 100) / 100;
+        session.isVendorConfirmed = true;
+        isBindingCommitted = true;
+      }
     }
 
     if (state === 'CUSTOMER_COUNTER' && entities.price) {
