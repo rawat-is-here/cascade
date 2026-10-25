@@ -26,3 +26,10 @@ yarn-error.log*
 # OS metadata
 .DS_Store
 Thumbs.db
+
+
+# Large model binaries
+models/
+*.gguf
+*.onnx
+*.zip

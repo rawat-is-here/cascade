@@ -24,7 +24,7 @@ STATES = [
     "SETTLED"
 ]
 
-def train_transition_matrix(dataset_path="evaluation/datasets/indic_negotiations_150.json"):
+def train_transition_matrix(dataset_path="evaluation/datasets/indic_negotiations_1500.json"):
     with open(dataset_path, "r", encoding="utf-8") as f:
         dialogues = json.load(f)
 

@@ -25,10 +25,10 @@ Unlike naive competitor solutions that host a **0.5B / 7B generative LLM on a la
 ## 2. Quantitative Evaluation Results (150 Real-World Dialogues)
 
 ### A. End-to-End Metrics
-* **Total Dialogue Turns Evaluated:** 583 turns
-* **End-to-End Monetary Derivation Accuracy ($R_{agreed} \times Q$):** **88.7%**
-* **Aborted Walkaway Accuracy (Zero-Ledger Invariant):** **94.0%**
-* **Freebie / Goodwill Separation Accuracy:** **94.0%**
+* **Total Dialogue Turns Evaluated:** 5781 turns
+* **End-to-End Monetary Derivation Accuracy ($R_{agreed} \times Q$):** **85.9%**
+* **Aborted Walkaway Accuracy (Zero-Ledger Invariant):** **93.7%**
+* **Freebie / Goodwill Separation Accuracy:** **93.7%**
 
 ---
 
@@ -36,11 +36,11 @@ Unlike naive competitor solutions that host a **0.5B / 7B generative LLM on a la
 
 | Ambient Noise (dB) | Real-World Street Analog | Cash Resolution Accuracy | Epistemic Decision |
 | :---: | :--- | :---: | :--- |
-| **50 dB** | Quiet morning prep / stall setup | **73.9%** | `CONSERVED_CANONICAL` |
-| **65 dB** | Normal customer conversational speech | **91.2%** | `CONSERVED_CANONICAL` |
-| **72 dB** | Crowded vegetable mandi peak crowd | **97.1%** | `PROBABILISTIC_PRIOR` |
-| **80 dB** | Motorcycle / auto-rickshaw idling | **89.7%** | `PROBABILISTIC_PRIOR` |
-| **88 dB** | Heavy diesel bus horn drowning audio | **86.2%** | Safe `UNKNOWN_ABSTAIN` (No Hallucination) |
+| **50 dB** | Quiet morning prep / stall setup | **88.6%** | `CONSERVED_CANONICAL` |
+| **65 dB** | Normal customer conversational speech | **84.7%** | `CONSERVED_CANONICAL` |
+| **72 dB** | Crowded vegetable mandi peak crowd | **86.2%** | `PROBABILISTIC_PRIOR` |
+| **80 dB** | Motorcycle / auto-rickshaw idling | **85.2%** | `PROBABILISTIC_PRIOR` |
+| **88 dB** | Heavy diesel bus horn drowning audio | **85.2%** | Safe `UNKNOWN_ABSTAIN` (No Hallucination) |
 
 ---
 
