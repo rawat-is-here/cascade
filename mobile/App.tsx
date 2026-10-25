@@ -7,8 +7,7 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  StatusBar,
-  Alert
+  StatusBar
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MorningStockModal } from './components/MorningStockModal';
@@ -16,6 +15,7 @@ import { UpiEventsModal } from './components/UpiEventsModal';
 import { SyncModal } from './components/SyncModal';
 import { EODReconciliationModal } from './components/EODReconciliationModal';
 import { LossModal } from './components/LossModal';
+import { BlendedPrompt, PromptInfo } from './components/BlendedPrompt';
 
 interface Transaction {
   id: string;
@@ -95,6 +95,12 @@ export default function App() {
     text: string;
   } | null>(null);
 
+  // Modern Blended Prompt / In-App Notification System
+  const [activePrompt, setActivePrompt] = useState<PromptInfo | null>(null);
+  const showPrompt = (info: PromptInfo) => {
+    setActivePrompt({ ...info });
+  };
+
   // Transactions
   const [transactions, setTransactions] = useState<Transaction[]>([
     { id: '1', title: 'Tamatar (3kg) + Sharma Ji', category: 'Vegetable Mandi', amount: 180, isCredit: true, time: '12:42 PM' },
@@ -121,9 +127,21 @@ export default function App() {
       const data = await res.json();
 
       if (scenario === 'WALKAWAY') {
-        Alert.alert('No sale recorded', 'The customer left without buying anything, so no sale was added.');
+        showPrompt({
+          badge: 'Customer Walkaway',
+          title: 'No Sale Recorded',
+          description: 'The customer left without buying anything. Zero rupees added.',
+          type: 'info',
+          icon: 'walk-outline'
+        });
       } else if (scenario === 'FREEBIE') {
-        Alert.alert('Free item noted', 'This was saved as a small customer freebie, not a sale.');
+        showPrompt({
+          badge: 'Freebie Request',
+          title: 'Customer Freebie Noted',
+          description: 'Recorded extra coriander/chili. Logged in inventory without inflating sales.',
+          type: 'info',
+          icon: 'gift-outline'
+        });
       } else {
         const amt = scenario === 'NEGOTIATION' ? 45 : 180;
         const newTx: Transaction = {
@@ -136,13 +154,32 @@ export default function App() {
         };
         setTransactions(prev => [newTx, ...prev]);
         setDrawerCash(prev => prev + amt);
+        showPrompt({
+          badge: 'Voice Sale',
+          title: scenario === 'NEGOTIATION' ? 'Agreed at ₹45' : 'Voice Sale Recorded: +₹180',
+          description: 'Transaction recorded and added to today’s stall drawer.',
+          type: 'success',
+          icon: 'mic-outline'
+        });
       }
     } catch {
       // Offline fallback
       if (scenario === 'WALKAWAY') {
-        Alert.alert('No sale recorded', 'The customer left without buying anything, so no sale was added.');
+        showPrompt({
+          badge: 'Customer Walkaway',
+          title: 'No Sale Recorded',
+          description: 'The customer left without buying anything. Zero rupees added.',
+          type: 'info',
+          icon: 'walk-outline'
+        });
       } else if (scenario === 'FREEBIE') {
-        Alert.alert('Free item noted', 'This was saved as a small customer freebie, not a sale.');
+        showPrompt({
+          badge: 'Freebie Request',
+          title: 'Customer Freebie Noted',
+          description: 'Recorded extra coriander/chili. Logged in inventory without inflating sales.',
+          type: 'info',
+          icon: 'gift-outline'
+        });
       } else {
         const amt = scenario === 'NEGOTIATION' ? 45 : 180;
         const newTx: Transaction = {
@@ -155,6 +192,13 @@ export default function App() {
         };
         setTransactions(prev => [newTx, ...prev]);
         setDrawerCash(prev => prev + amt);
+        showPrompt({
+          badge: 'Voice Sale',
+          title: scenario === 'NEGOTIATION' ? 'Agreed at ₹45' : 'Voice Sale Recorded: +₹180',
+          description: 'Transaction recorded offline into stall register.',
+          type: 'success',
+          icon: 'mic-outline'
+        });
       }
     }
     setLoading(false);
@@ -170,7 +214,13 @@ export default function App() {
       time: 'Just now'
     };
     setTransactions(prev => [soundboxTx, ...prev]);
-    Alert.alert('Payment added', 'The UPI payment was added to today’s sales.');
+    showPrompt({
+      badge: 'Paytm Soundbox',
+      title: 'Payment Received: +₹140.00',
+      description: 'Soundbox audio chime verified and credited to today’s sales.',
+      type: 'success',
+      icon: 'qr-code-outline'
+    });
   };
 
   const handleReset = () => {
@@ -178,12 +228,19 @@ export default function App() {
     setProfitMin(165);
     setProfitMax(215);
     setActiveSabotage('CLEAN');
-    Alert.alert('Day reset', 'Today’s sample balance has been reset.');
+    showPrompt({
+      badge: 'Stall Reset',
+      title: 'Sample Baseline Restored',
+      description: 'Today’s cash drawer reset to morning baseline ₹2,500.',
+      type: 'info',
+      icon: 'refresh-outline'
+    });
   };
 
   return (
     <SafeAreaView style={styles.safeContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <BlendedPrompt prompt={activePrompt} onDismiss={() => setActivePrompt(null)} />
 
       {/* HEADER SECTION */}
       <View style={styles.topHeader}>
@@ -217,9 +274,21 @@ export default function App() {
                 setIsListening(prev => {
                   const nextState = !prev;
                   if (nextState) {
-                    Alert.alert('Shop Open', 'Listening is active. Speak sales naturally.');
+                    showPrompt({
+                      badge: 'Shop Open',
+                      title: 'Listening for Sales',
+                      description: 'Microphone active in background. Speak sales naturally.',
+                      type: 'success',
+                      icon: 'radio-outline'
+                    });
                   } else {
-                    Alert.alert('Shop Paused', 'Microphone paused. Tap Start Day to resume.');
+                    showPrompt({
+                      badge: 'Shop Paused',
+                      title: 'Microphone Paused',
+                      description: 'Microphone paused. Tap Start Day to resume.',
+                      type: 'neutral',
+                      icon: 'pause-circle-outline'
+                    });
                   }
                   return nextState;
                 });
@@ -278,7 +347,13 @@ export default function App() {
                   setDrawerCash(prev => prev + amt);
                   setLatestHeardDialogue(`Confirmed: ${confirmationPending.item} → ₹${amt}`);
                   setConfirmationPending(null);
-                  Alert.alert('Sale Confirmed', `Added ₹${amt} to today's sales.`);
+                  showPrompt({
+                    badge: 'Sale Confirmed',
+                    title: `Added ₹${amt} to Sales`,
+                    description: `Confirmed ${confirmationPending.item} order from customer.`,
+                    type: 'success',
+                    icon: 'checkmark-circle-outline'
+                  });
                 }}
               >
                 <Ionicons name="checkmark-circle" size={15} color="#073B3A" style={{ marginRight: 5 }} />
@@ -289,7 +364,13 @@ export default function App() {
                 style={styles.confirmNoBtn}
                 onPress={() => {
                   setConfirmationPending(null);
-                  Alert.alert('Sale Ignored', 'Discarded noisy input. No fake sale was added.');
+                  showPrompt({
+                    badge: 'Audio Quarantined',
+                    title: 'Noisy Audio Ignored',
+                    description: 'Discarded ambiguous audio. No phantom sale was added.',
+                    type: 'warning',
+                    icon: 'close-circle-outline'
+                  });
                 }}
               >
                 <Ionicons name="close-circle-outline" size={15} color="#6B7280" style={{ marginRight: 4 }} />
@@ -298,57 +379,6 @@ export default function App() {
             </View>
           </View>
         )}
-
-        {/* 1. CONCEPTZILLA SIGNATURE WAVE CARDS (CAROUSEL) */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.cardsCarousel}
-        >
-          {/* CARD 1: ZILLA CARD (WHITE WITH LIME & PINE WAVE) */}
-          <View style={styles.zillaCard}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardBrandBlock}>
-                <Ionicons name="layers-outline" size={14} color="#073B3A" style={styles.cardBrandIcon} />
-                <Text style={styles.cardBrandTitle}>Cascade Card</Text>
-              </View>
-              {/* Organic Curved Wave Graphic on Right */}
-              <View style={styles.cardWaveContainer}>
-                <View style={styles.cardWavePine} />
-                <View style={styles.cardWaveLime} />
-              </View>
-            </View>
-
-            <View style={styles.cardAmountBlock}>
-              <Text style={styles.cardAmountText}>₹{drawerCash.toLocaleString('en-IN')}.00</Text>
-              <Text style={styles.cardSubText}>•••• 5722  •  Physical Drawer Cash</Text>
-            </View>
-
-            <View style={styles.cardFooterRow}>
-              <Text style={styles.cardMeshPill}>● UP TO DATE</Text>
-              <View style={styles.cardCircles}>
-                <View style={[styles.circleHalf, { backgroundColor: '#EB001B' }]} />
-                <View style={[styles.circleHalf, { backgroundColor: '#F79E1B', marginLeft: -8 }]} />
-              </View>
-            </View>
-          </View>
-
-          {/* CARD 2: KURO CARD (ELECTRIC LIME & DEEP PINE SPLIT) */}
-          <View style={styles.kuroCard}>
-            <View style={styles.kuroTopRow}>
-              <Ionicons name="sparkles-outline" size={17} color="#073B3A" style={styles.kuroAsterisk} />
-              <Text style={styles.kuroTitle}>Today’s Profit</Text>
-            </View>
-
-            <View style={styles.kuroWavePineBottom}>
-              <Text style={styles.kuroAmount}>₹{profitMin} – ₹{profitMax}</Text>
-              <View style={styles.kuroFooterRow}>
-                <Text style={styles.kuroCardNumber}>•••• 2981</Text>
-                <Text style={styles.kuroVisaBadge}>ESTIMATE</Text>
-              </View>
-            </View>
-          </View>
-        </ScrollView>
 
         {/* Today's balance */}
         <View style={styles.periodTableCard}>
@@ -632,7 +662,13 @@ export default function App() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.dockItem} onPress={() => {
-            Alert.alert('Your shop', 'Manage your shop details and account settings here.');
+            showPrompt({
+              badge: 'Stall Profile',
+              title: shopName,
+              description: 'Offline-first terminal running zero-loss CRDT ledger.',
+              type: 'info',
+              icon: 'storefront-outline'
+            });
           }}>
             <Ionicons name="person-outline" size={21} color="#9CA3AF" />
           </TouchableOpacity>
@@ -661,6 +697,13 @@ export default function App() {
             },
             ...prev
           ]);
+          showPrompt({
+            badge: 'Mandi Stock Added',
+            title: `Recorded Stock Outflow: ₹${cost.toLocaleString('en-IN')}`,
+            description: summary.isCash ? 'Paid in physical cash from stall drawer.' : 'Logged as wholesale credit (Udhaar).',
+            type: 'info',
+            icon: 'cart-outline'
+          });
         }}
       />
 
@@ -680,6 +723,13 @@ export default function App() {
             };
             setTransactions(prev => [newTx, ...prev]);
             setDrawerCash(prev => prev + amount);
+            showPrompt({
+              badge: 'UPI Verified',
+              title: `Received +₹${amount.toLocaleString('en-IN')}`,
+              description: 'Soundbox audio chime cross-checked with bank feed.',
+              type: 'success',
+              icon: 'qr-code-outline'
+            });
           }
         }}
       />
@@ -689,7 +739,13 @@ export default function App() {
         onClose={() => setShowSyncModal(false)}
         apiBaseUrl={getApiBaseUrl()}
         onSyncComplete={(count) => {
-          Alert.alert('Helper Sync', `Synchronized ${count} sales from nearby helper stall phone.`);
+          showPrompt({
+            badge: 'CRDT Mesh Sync',
+            title: 'Helper Phone Merged',
+            description: `Synchronized ${count} sales from nearby helper stall phone.`,
+            type: 'success',
+            icon: 'git-merge-outline'
+          });
         }}
       />
 
@@ -700,10 +756,13 @@ export default function App() {
         confirmedUpiTotal={140}
         onReconciliationComplete={(res) => {
           if (res.acceptedTransactions) {
-            Alert.alert(
-              'Register Closed',
-              `${res.acceptedTransactions.length} sales confirmed. Real take-home profit: ₹${res.takeHomeProfit || 0}`
-            );
+            showPrompt({
+              badge: 'Register Closed',
+              title: 'Day Reconciled',
+              description: `${res.acceptedTransactions.length} sales confirmed. Real profit: ₹${res.takeHomeProfit || 0}.`,
+              type: 'success',
+              icon: 'shield-checkmark-outline'
+            });
           }
           setShowEOD(false);
         }}
@@ -919,171 +978,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#6B7280',
-  },
-
-  /* 1. CONCEPTZILLA WAVE CARDS */
-  cardsCarousel: {
-    paddingVertical: 10,
-    paddingRight: 10,
-  },
-  zillaCard: {
-    width: 250,
-    height: 155,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 24,
-    padding: 18,
-    marginRight: 14,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    justifyContent: 'space-between',
-    overflow: 'hidden',
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  cardBrandBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  cardBrandIcon: {
-    marginRight: 4,
-  },
-  cardBrandTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  cardWaveContainer: {
-    position: 'absolute',
-    top: -20,
-    right: -25,
-    width: 110,
-    height: 150,
-  },
-  cardWavePine: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 80,
-    height: 140,
-    backgroundColor: '#073B3A',
-    borderBottomLeftRadius: 50,
-    borderTopLeftRadius: 60,
-  },
-  cardWaveLime: {
-    position: 'absolute',
-    top: 25,
-    right: 25,
-    width: 50,
-    height: 100,
-    backgroundColor: '#E2FD52',
-    borderBottomLeftRadius: 40,
-    borderTopLeftRadius: 50,
-  },
-  cardAmountBlock: {
-    marginTop: 10,
-    zIndex: 2,
-  },
-  cardAmountText: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#111827',
-    letterSpacing: -0.5,
-  },
-  cardSubText: {
-    fontSize: 10,
-    color: '#6B7280',
-    marginTop: 4,
-    fontWeight: '600',
-  },
-  cardFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    zIndex: 2,
-  },
-  cardMeshPill: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#073B3A',
-    letterSpacing: 0.5,
-  },
-  cardCircles: {
-    flexDirection: 'row',
-  },
-  circleHalf: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-  },
-
-  /* KURO CARD */
-  kuroCard: {
-    width: 220,
-    height: 155,
-    backgroundColor: '#E2FD52',
-    borderRadius: 24,
-    marginRight: 10,
-    overflow: 'hidden',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  kuroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 18,
-  },
-  kuroAsterisk: {
-    fontSize: 16,
-    color: '#073B3A',
-    marginRight: 6,
-    fontWeight: '800',
-  },
-  kuroTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#073B3A',
-  },
-  kuroWavePineBottom: {
-    backgroundColor: '#073B3A',
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 60,
-    padding: 16,
-    paddingTop: 18,
-  },
-  kuroAmount: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  kuroFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  kuroCardNumber: {
-    fontSize: 10,
-    color: '#9CA3AF',
-    fontWeight: '600',
-  },
-  kuroVisaBadge: {
-    fontSize: 10,
-    color: '#E2FD52',
-    fontWeight: '800',
-    letterSpacing: 0.8,
   },
 
   /* 2. ELECTRIC LIME BANNER */

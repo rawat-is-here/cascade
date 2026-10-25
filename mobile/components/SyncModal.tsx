@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
-  Alert,
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,17 +37,9 @@ export const SyncModal: React.FC<Props> = ({
       const data = await res.json();
       setSynced(true);
       if (onSyncComplete) onSyncComplete(data.merged || 3);
-      Alert.alert(
-        'Sales Combined Successfully',
-        `All sales from Ramesh’s phone have been merged safely using offline CRDT Bluetooth mesh. Net accounts remain 100% balanced!`
-      );
     } catch {
       setSynced(true);
       if (onSyncComplete) onSyncComplete(3);
-      Alert.alert(
-        'Offline Mesh Combined',
-        '3 entries combined with helper phone via local Bluetooth. Zero internet required.'
-      );
     } finally {
       setSyncing(false);
     }

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
-  Alert,
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -68,6 +67,7 @@ export const UpiEventsModal: React.FC<Props> = ({
       status: 'QUARANTINED'
     }
   ]);
+  const [statusNotice, setStatusNotice] = useState<string | null>(null);
 
   const handleSimulateEvent = async (kind: 'SALE' | 'PERSONAL' | 'NEIGHBOR') => {
     setLoading(true);
@@ -124,7 +124,7 @@ export const UpiEventsModal: React.FC<Props> = ({
           status: 'CONFIRMED'
         };
         if (onUpiPaymentConfirmed) onUpiPaymentConfirmed(amount, true);
-        Alert.alert('Shop Sale Added', `₹${amount} UPI payment verified and added to today’s sales!`);
+        setStatusNotice(`✓ Verified stall sale (+₹${amount}) added to ledger.`);
       } else if (kind === 'PERSONAL') {
         newItem = {
           id: `upi-live-${Date.now()}`,
@@ -136,7 +136,7 @@ export const UpiEventsModal: React.FC<Props> = ({
           time: 'Just now',
           status: 'ISOLATED'
         };
-        Alert.alert('Personal Money Isolated', `₹${amount.toLocaleString('en-IN')} kept in your personal equity without inflating shop sales.`);
+        setStatusNotice(`✓ Personal money (+₹${amount.toLocaleString('en-IN')}) safely isolated from shop.`);
       } else {
         newItem = {
           id: `upi-live-${Date.now()}`,
@@ -148,7 +148,7 @@ export const UpiEventsModal: React.FC<Props> = ({
           time: 'Just now',
           status: 'QUARANTINED'
         };
-        Alert.alert('Neighbor Soundbox Ignored', `Heard ₹${amount} from nearby stall. Safely ignored to prevent false double-counting.`);
+        setStatusNotice(`⚠ Neighbor stall chime (₹${amount}) ignored safely.`);
       }
 
       setFeed(prev => [newItem, ...prev]);
@@ -156,11 +156,11 @@ export const UpiEventsModal: React.FC<Props> = ({
       // Offline simulation
       if (kind === 'SALE') {
         if (onUpiPaymentConfirmed) onUpiPaymentConfirmed(amount, true);
-        Alert.alert('Shop Sale Added', `₹${amount} recorded locally as verified stall sale.`);
+        setStatusNotice(`✓ Verified stall sale (+₹${amount}) recorded.`);
       } else if (kind === 'PERSONAL') {
-        Alert.alert('Personal Money Isolated', `₹${amount.toLocaleString('en-IN')} kept in personal equity.`);
+        setStatusNotice(`✓ Personal money (+₹${amount.toLocaleString('en-IN')}) safely isolated.`);
       } else {
-        Alert.alert('Neighbor Soundbox Ignored', `Neighbor stall chime ignored safely.`);
+        setStatusNotice(`⚠ Neighbor stall chime (₹${amount}) ignored safely.`);
       }
     } finally {
       setLoading(false);
@@ -226,6 +226,13 @@ export const UpiEventsModal: React.FC<Props> = ({
                 <Text style={[styles.simButtonText, { color: '#4B5563' }]}>Neighbor (₹50)</Text>
               </TouchableOpacity>
             </View>
+
+            {statusNotice && (
+              <View style={styles.inlinePromptBanner}>
+                <Ionicons name="sparkles" size={14} color="#073B3A" style={{ marginRight: 6 }} />
+                <Text style={styles.inlinePromptText}>{statusNotice}</Text>
+              </View>
+            )}
 
             {/* Activity Feed */}
             <Text style={styles.sectionHeading}>Today's Online Events</Text>
