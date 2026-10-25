@@ -24,7 +24,7 @@ if (parsedAzadpur.items.length !== 3) {
 if (parsedAzadpur.totalBill !== 1720) {
   throw new Error(`TEST 1 FAILED: Expected total bill 1720, got ${parsedAzadpur.totalBill}`);
 }
-const tomatoItem = parsedAzadpur.items.find(i => i.commodityKey === 'tomato');
+const tomatoItem = parsedAzadpur.items.find(i => /tamatar/i.test(i.name));
 if (!tomatoItem || tomatoItem.quantityKg !== 50 || tomatoItem.ratePerKg !== 14) {
   throw new Error(`TEST 1 FAILED: Tomato item misparsed: ${JSON.stringify(tomatoItem)}`);
 }
@@ -41,7 +41,7 @@ console.log(`  Mandi Detected: "${parsedVashi.mandiName}"`);
 console.log(`  Items Parsed: ${parsedVashi.items.length}`);
 console.log(`  Total Bill: Rs. ${parsedVashi.totalBill}`);
 
-const potatoItem = parsedVashi.items.find(i => i.commodityKey === 'potato');
+const potatoItem = parsedVashi.items.find(i => /potato|batata|aloo/i.test(i.name) || i.commodityKey === 'potato' || i.commodityKey === 'batata');
 if (!potatoItem) throw new Error('TEST 2 FAILED: Batata not found in Vashi slip');
 console.log(`  Batata parsed: ${potatoItem.quantityKg}kg (from 2 bori) @ Rs.${potatoItem.ratePerKg}/kg = Rs.${potatoItem.totalCost}`);
 

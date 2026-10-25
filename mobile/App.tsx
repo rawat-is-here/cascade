@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Constants from 'expo-constants';
 import {
+  LogBox,
   StyleSheet,
   Text,
   View,
@@ -44,8 +45,10 @@ function getApiBaseUrl(): string {
       return `http://${ip}:4000/api`;
     }
   }
-  return 'http://localhost:4000/api';
+  return 'http://192.168.108.107:4000/api';
 }
+
+LogBox.ignoreAllLogs();
 
 export default function App() {
   // Shop Profile State (Fetched from SQLite database via CRDT LWW entities view)

@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { computeSha256 } from './hash_util';
 import type { BalancedDelta, DAGNode, EpistemicConfidence, HLC } from '../../shared/types.ts';
 import { InvariantValidator } from '../constraints.ts';
 
@@ -41,9 +41,7 @@ export class CausalDAG {
       }
     });
 
-    return createHash('sha256')
-      .update(`${sortedParents}|${canonicalPayload}|${lamportClock}|${delta.hlc.deviceId}`)
-      .digest('hex');
+    return computeSha256(`${sortedParents}|${canonicalPayload}|${lamportClock}|${delta.hlc.deviceId}`);
   }
 
   /**

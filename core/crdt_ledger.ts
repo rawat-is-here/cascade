@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import { computeSha256 } from './crdt/hash_util';
 import { VendorEvent, CRDTNode } from '../shared/types';
 
 export class CrdtLedger {
@@ -13,7 +13,7 @@ export class CrdtLedger {
 
   hash(parents: string[], event: VendorEvent, clock: number) {
     const data = JSON.stringify({ parents, id: event.id, clock, entries: event.entries });
-    return crypto.createHash('sha256').update(data).digest('hex').slice(0, 16);
+    return computeSha256(data).slice(0, 16);
   }
 
   addEvent(event: VendorEvent): CRDTNode {

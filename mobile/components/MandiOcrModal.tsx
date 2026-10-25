@@ -41,15 +41,12 @@ export const MandiOcrModal: React.FC<Props> = ({
   const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
 
-  // Parsed / Editable Slip State
-  const [mandiName, setMandiName] = useState('Azadpur Subzi Mandi Wholesale');
-  const [slipNo, setSlipNo] = useState('MND-84920');
-  const [slipDate, setSlipDate] = useState('Today, 05:40 AM');
-  const [items, setItems] = useState<SlipItem[]>([
-    { name: 'Tomatoes (Grade-A)', quantityKg: 50, ratePerKg: 14, totalCost: 700 },
-    { name: 'Potatoes (New Crop)', quantityKg: 40, ratePerKg: 12, totalCost: 480 },
-    { name: 'Red Onions (Nashik)', quantityKg: 30, ratePerKg: 18, totalCost: 540 }
-  ]);
+  // Parsed / Editable Slip State (Populated strictly by real OCR or chosen preset)
+  const [mandiName, setMandiName] = useState('');
+  const [slipNo, setSlipNo] = useState('');
+  const [slipDate, setSlipDate] = useState('');
+  const [rawTextExtracted, setRawTextExtracted] = useState('');
+  const [items, setItems] = useState<SlipItem[]>([]);
 
   // New item entry state
   const [showAddItem, setShowAddItem] = useState(false);
@@ -109,7 +106,7 @@ export const MandiOcrModal: React.FC<Props> = ({
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        quality: 0.8,
+        quality: 0.5,
         base64: true
       });
 
@@ -134,7 +131,7 @@ export const MandiOcrModal: React.FC<Props> = ({
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        quality: 0.8,
+        quality: 0.5,
         base64: true
       });
 
@@ -168,7 +165,7 @@ export const MandiOcrModal: React.FC<Props> = ({
         try {
           recognizedReceipt = await MandiOcrService.recognizeSlip(uri);
         } catch (mlKitErr) {
-          console.warn('[ML Kit] On-device OCR fallback:', mlKitErr);
+          console.log('[ML Kit] On-device OCR fallback:', mlKitErr);
         }
       }
 
@@ -189,17 +186,18 @@ export const MandiOcrModal: React.FC<Props> = ({
           serverSlip = data.slip;
         }
       } catch (netErr) {
-        console.warn('[MandiOCR] Backend offline, utilizing local ML Kit parse:', netErr);
+        console.log('[MandiOCR] Fallback local parse:', netErr);
       }
 
       const finalSlip = serverSlip || recognizedReceipt;
       if (finalSlip) {
-        setMandiName(finalSlip.mandiName || 'Azadpur Subzi Mandi Wholesale');
+        setMandiName(finalSlip.mandiName || 'Wholesale Mandi Supplier');
         setSlipNo(finalSlip.slipNo || `MND-${Math.floor(10000 + Math.random() * 90000)}`);
         setSlipDate(finalSlip.date || 'Today, ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
-        if (finalSlip.items && finalSlip.items.length > 0) {
-          setItems(finalSlip.items);
-        }
+        setRawTextExtracted(finalSlip.rawText || '');
+        setItems(finalSlip.items || []);
+      } else {
+        setItems([]);
       }
 
       setScanStep('PARSED');
@@ -311,6 +309,8 @@ export const MandiOcrModal: React.FC<Props> = ({
   const handleResetModal = () => {
     setScanStep('VIEWFINDER');
     setPhotoUri(null);
+    setRawTextExtracted('');
+    setItems([]);
     onClose();
   };
 

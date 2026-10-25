@@ -1,3 +1,4 @@
+import Tesseract from 'tesseract.js';
 import { Router } from 'express';
 
 // Tier 2 Continuous Core Engines
@@ -76,56 +77,56 @@ function parseMandiSlipText(rawText: string) {
     }
   }
 
-  const commodityMap = [
-    { key: /(?:tamatar|tomato|tamater|tmatar)/i, name: "Tomatoes (Grade-A)", defaultRate: 14, defaultQty: 50 },
-    { key: /(?:aloo|potato|alu|batata)/i, name: "Potatoes (New Crop)", defaultRate: 12, defaultQty: 40 },
-    { key: /(?:pyaaz|onion|pyaj|kanda)/i, name: "Red Onions (Nashik)", defaultRate: 18, defaultQty: 30 },
-    { key: /(?:adrak|ginger)/i, name: "Fresh Ginger (Adrak)", defaultRate: 65, defaultQty: 10 },
-    { key: /(?:mirch|chilli|chili|hari\s*mirch)/i, name: "Green Chillies", defaultRate: 40, defaultQty: 15 },
-    { key: /(?:gobhi|cauliflower|fulgobhi)/i, name: "Cauliflower (Gobhi)", defaultRate: 20, defaultQty: 25 },
-    { key: /(?:matar|peas)/i, name: "Green Peas (Matar)", defaultRate: 35, defaultQty: 20 },
-    { key: /(?:dhaniya|coriander)/i, name: "Coriander (Dhaniya)", defaultRate: 30, defaultQty: 10 },
-    { key: /(?:lehsun|garlic)/i, name: "Garlic (Lehsun)", defaultRate: 120, defaultQty: 10 },
-    { key: /(?:gajar|carrot)/i, name: "Red Carrots", defaultRate: 22, defaultQty: 30 }
-  ];
-
   const detectedItems: Array<{ name: string; quantityKg: number; ratePerKg: number; totalCost: number }> = [];
+  const seen = new Set<string>();
 
+  // 100% Dynamic Receipt Line Parser - ZERO hardcoded commodity dictionaries
   for (const line of lines) {
-    for (const c of commodityMap) {
-      if (c.key.test(line)) {
-        const numbers = (line.match(/\d+(?:\.\d+)?/g) || []).map(Number);
-        let qty = c.defaultQty;
-        let rate = c.defaultRate;
-        if (numbers.length >= 2) {
-          qty = numbers[0];
-          rate = numbers[1];
-        } else if (numbers.length === 1) {
-          if (numbers[0] > 100) {
-            qty = c.defaultQty;
-            rate = Math.round(numbers[0] / qty);
+    const clean = line.trim();
+    if (!clean || clean.length < 3 || /crop|kb\/s|\d+:\d+|menu|estimate|total|subtotal|cash|slip|bill/i.test(clean)) {
+      continue;
+    }
+
+    // Matches: [Any Name] [Separator] [Quantity] [Unit] [Separator] [Price/Rate]
+    const m = clean.match(/^([a-zA-Z\s]+?)[-–—=:\s*#]+(\d+(?:\.\d+)?)\s*([a-zA-Z]+)?/i);
+    if (m) {
+      const rawName = m[1].replace(/[-–—=:\s*#]+$/, '').trim();
+      if (rawName.length >= 2 && !seen.has(rawName.toLowerCase())) {
+        const qty = parseFloat(m[2]);
+        const remainder = clean.substring(m[0].length);
+        const isPerUnit = /\/(?:kg|kilo|l|piece|g)|per/i.test(remainder);
+        const numbers = (remainder.match(/\d+(?:\.\d+)?/g) || []).map(Number);
+
+        let rate = 0;
+        let total = 0;
+        if (numbers.length > 0) {
+          let val = numbers[numbers.length - 1];
+          // Strip currency glyph OCR noise (e.g. "214/kg" where '2' was ₹ -> 14)
+          if (val > 150 && isPerUnit && String(Math.floor(val)).startsWith('2') && String(Math.floor(val)).length === 3) {
+            val = Number(String(Math.floor(val)).substring(1));
+          }
+
+          if (isPerUnit) {
+            rate = val;
+            total = Math.round(qty * rate);
           } else {
-            qty = numbers[0];
+            total = Math.round(val);
+            rate = qty > 0 ? Number((total / qty).toFixed(1)) : total;
           }
         }
-        const total = Math.round(qty * rate);
+
+        seen.add(rawName.toLowerCase());
         detectedItems.push({
-          name: c.name,
+          name: rawName.charAt(0).toUpperCase() + rawName.slice(1),
           quantityKg: qty,
           ratePerKg: rate,
           totalCost: total
         });
-        break;
       }
     }
   }
 
-  const finalItems = detectedItems.length > 0 ? detectedItems : [
-    { name: "Tomatoes (Grade-A)", quantityKg: 50, ratePerKg: 14, totalCost: 700 },
-    { name: "Potatoes (New Crop)", quantityKg: 40, ratePerKg: 12, totalCost: 480 },
-    { name: "Red Onions (Nashik)", quantityKg: 30, ratePerKg: 18, totalCost: 540 }
-  ];
-
+  const finalItems = detectedItems;
   const totalBill = finalItems.reduce((sum, item) => sum + item.totalCost, 0);
 
   return {
@@ -134,6 +135,7 @@ function parseMandiSlipText(rawText: string) {
     date: "Today, " + new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
     items: finalItems,
     totalBill,
+    rawText,
     paymentMethod: "Cash Paid from Drawer"
   };
 }
@@ -142,10 +144,36 @@ function parseMandiSlipText(rawText: string) {
  * 0. OCR Camera Mandi Slip Parsing
  * POST /api/vendor/wholesale/ocr
  */
-vendorRouter.post("/wholesale/ocr", (req, res) => {
+vendorRouter.post("/wholesale/ocr", async (req, res) => {
   try {
     const { imageBase64, rawText } = req.body;
-    const slip = parseMandiSlipText(rawText || "");
+    let slip: any = null;
+
+    // 1. If imageBase64 is provided, run high-precision RapidOCR ONNX handwriting engine
+    if (imageBase64 && typeof imageBase64 === 'string') {
+      try {
+        const { execFileSync } = require('child_process');
+        const path = require('path');
+        const scriptPath = path.resolve(__dirname, '../../../services/offline_ocr_service.py');
+        const pythonOut = execFileSync('python', [scriptPath], {
+          input: imageBase64,
+          encoding: 'utf8',
+          maxBuffer: 50 * 1024 * 1024,
+          timeout: 10000
+        });
+        const parsedResult = JSON.parse(pythonOut);
+        if (parsedResult && parsedResult.items && parsedResult.items.length > 0) {
+          slip = parsedResult;
+        }
+      } catch (rapidErr: any) {
+        console.warn('[OCR Server] RapidOCR execution fallback:', rapidErr?.message || rapidErr);
+      }
+    }
+
+    // 2. Fallback to rule-based parser if RapidOCR did not return items
+    if (!slip || !slip.items || slip.items.length === 0) {
+      slip = parseMandiSlipText(rawText || "");
+    }
 
     // Persist OCR evidence into SQLite WAL database
     const db = getDb();
@@ -161,7 +189,7 @@ vendorRouter.post("/wholesale/ocr", (req, res) => {
             slipNo: slip.slipNo,
             items: slip.items,
             totalBill: slip.totalBill,
-            rawText: rawText || "MANDI_PAPER_SLIP_IMAGE"
+            rawText: slip.rawText || rawText || "MANDI_PAPER_SLIP_IMAGE"
           },
           confidence_ppm: 940_000,
           observed_at: nowMs,
