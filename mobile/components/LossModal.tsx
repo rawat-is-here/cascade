@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface Props {
   visible: boolean;
@@ -46,17 +47,22 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, onCalculate }) =>
         <View style={styles.sheet}>
           <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.header}>
-              <View>
-                <Text style={styles.title}>🍅 Stock Loss Attribution</Text>
-                <Text style={styles.sub}>Bayesian environmental decomposition</Text>
+              <View style={styles.titleGroup}>
+                <View style={styles.titleIcon}>
+                  <Ionicons name="leaf-outline" size={20} color="#073B3A" />
+                </View>
+                <View>
+                  <Text style={styles.title}>Check stock loss</Text>
+                  <Text style={styles.sub}>See why some stock may be missing.</Text>
+                </View>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                <Text style={styles.closeText}>✕</Text>
+                <Ionicons name="close" size={21} color="#52635F" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Select Commodity</Text>
+              <Text style={styles.fieldLabel}>Product</Text>
               <View style={styles.chipRow}>
                 {['Tomatoes', 'Onions', 'Potatoes'].map(c => (
                   <TouchableOpacity
@@ -74,7 +80,7 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, onCalculate }) =>
 
             <View style={styles.rowTwo}>
               <View style={[styles.fieldGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.fieldLabel}>Missing Stock (kg)</Text>
+                <Text style={styles.fieldLabel}>Missing stock (kg)</Text>
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
@@ -84,7 +90,7 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, onCalculate }) =>
               </View>
 
               <View style={[styles.fieldGroup, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.fieldLabel}>Ambient Temp (°C)</Text>
+                <Text style={styles.fieldLabel}>Temperature (°C)</Text>
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
@@ -95,7 +101,7 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, onCalculate }) =>
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Hours Exposed to Mandi Heat</Text>
+              <Text style={styles.fieldLabel}>Time in heat (hours)</Text>
               <TextInput
                 style={styles.input}
                 keyboardType="numeric"
@@ -106,36 +112,52 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, onCalculate }) =>
 
             {/* ELECTRIC LIME CTA */}
             <TouchableOpacity style={styles.calcBtn} onPress={handleCompute}>
-              <Text style={styles.calcBtnText}>⚡ Solve Bayesian Environmental Split</Text>
+              <Ionicons name="sparkles-outline" size={19} color="#073B3A" />
+              <Text style={styles.calcBtnText}>Check possible reasons</Text>
             </TouchableOpacity>
 
             {result && (
               <View style={styles.resultsCard}>
-                <Text style={styles.resHeading}>Bayesian Attribution Breakdown</Text>
+                <Text style={styles.resEyebrow}>STOCK LOSS SUMMARY</Text>
+                <Text style={styles.resHeading}>Possible reasons</Text>
                 
                 <View style={styles.statRow}>
-                  <Text style={styles.statLabel}>🔥 Mandi Heat Rot (Spoilage):</Text>
+                  <View style={styles.reasonCopy}>
+                    <View style={[styles.reasonIcon, { backgroundColor: '#E9F7EF' }]}>
+                      <Ionicons name="thermometer-outline" size={17} color="#073B3A" />
+                    </View>
+                    <Text style={styles.statLabel}>Heat spoilage</Text>
+                  </View>
                   <Text style={[styles.statVal, { color: '#073B3A' }]}>{result.spoilage}%</Text>
                 </View>
+                <View style={styles.track}><View style={[styles.fill, { width: `${result.spoilage}%`, backgroundColor: '#073B3A' }]} /></View>
 
                 <View style={styles.statRow}>
-                  <Text style={styles.statLabel}>🍛 Stall Lunch (Family Eating):</Text>
+                  <View style={styles.reasonCopy}>
+                    <View style={[styles.reasonIcon, { backgroundColor: '#F1FFE5' }]}>
+                      <Ionicons name="restaurant-outline" size={17} color="#5B7B00" />
+                    </View>
+                    <Text style={styles.statLabel}>Family use</Text>
+                  </View>
                   <Text style={[styles.statVal, { color: '#073B3A' }]}>{result.eating}%</Text>
                 </View>
+                <View style={styles.track}><View style={[styles.fill, { width: `${result.eating}%`, backgroundColor: '#A8D600' }]} /></View>
 
                 <View style={styles.statRow}>
-                  <Text style={styles.statLabel}>🏃 Roadside Theft (Loss):</Text>
+                  <View style={styles.reasonCopy}>
+                    <View style={[styles.reasonIcon, { backgroundColor: '#FFF1F0' }]}>
+                      <Ionicons name="alert-circle-outline" size={17} color="#C63C32" />
+                    </View>
+                    <Text style={styles.statLabel}>Other loss</Text>
+                  </View>
                   <Text style={[styles.statVal, { color: '#DC2626' }]}>{result.theft}%</Text>
                 </View>
-
-                <Text style={styles.hint}>
-                  Accounted as: Debit Loss:Spoilage, Debit Drawing:Family, Credit Inventory
-                </Text>
+                <View style={styles.track}><View style={[styles.fill, { width: `${result.theft}%`, backgroundColor: '#F16A5B' }]} /></View>
               </View>
             )}
 
             <TouchableOpacity style={styles.applyBtn} onPress={onClose}>
-              <Text style={styles.applyBtnText}>Apply to Dashboard</Text>
+              <Text style={styles.applyBtnText}>Save changes</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -170,15 +192,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
+  titleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  titleIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: '#F1FFE5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
   title: {
     color: '#111827',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
   },
   sub: {
-    color: '#6B7280',
-    fontSize: 12,
-    marginTop: 2,
+    color: '#667A75',
+    fontSize: 13,
+    marginTop: 3,
     fontWeight: '500',
   },
   closeBtn: {
@@ -207,11 +244,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FBFA',
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    borderRadius: 14,
-    padding: 12,
+    borderColor: '#DDECE7',
+    borderRadius: 16,
+    padding: 14,
     color: '#111827',
     fontSize: 15,
     fontWeight: '600',
@@ -242,7 +279,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2FD52',
     padding: 16,
     borderRadius: 18,
-    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
     marginVertical: 12,
     shadowColor: '#E2FD52',
     shadowOffset: { width: 0, height: 4 },
@@ -254,25 +292,45 @@ const styles = StyleSheet.create({
     color: '#073B3A',
     fontSize: 14,
     fontWeight: '900',
+    marginLeft: 8,
   },
   resultsCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 18,
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#DDECE7',
+  },
+  resEyebrow: {
+    color: '#6E827D',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 4,
   },
   resHeading: {
     color: '#111827',
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '800',
     marginBottom: 10,
   },
   statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 4,
+    marginTop: 12,
+  },
+  reasonCopy: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reasonIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 9,
   },
   statLabel: {
     color: '#4B5563',
@@ -280,13 +338,19 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   statVal: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
   },
-  hint: {
-    color: '#6B7280',
-    fontSize: 11,
+  track: {
+    height: 7,
+    backgroundColor: '#EAF0EE',
+    borderRadius: 4,
+    overflow: 'hidden',
     marginTop: 8,
+  },
+  fill: {
+    height: '100%',
+    borderRadius: 4,
   },
   applyBtn: {
     backgroundColor: '#073B3A',

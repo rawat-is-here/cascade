@@ -9,6 +9,7 @@ import {
   StatusBar,
   Alert
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { EODReconciliationModal } from './components/EODReconciliationModal';
 import { LossModal } from './components/LossModal';
 
@@ -67,15 +68,15 @@ export default function App() {
       const data = await res.json();
 
       if (scenario === 'WALKAWAY') {
-        Alert.alert('🛡️ Walkaway Invariant', 'Customer walked away: 0 journal debits created. Zero hallucinated revenue.');
+        Alert.alert('No sale recorded', 'The customer left without buying anything, so no sale was added.');
       } else if (scenario === 'FREEBIE') {
-        Alert.alert('🌿 Freebie Invariant', 'Isolated as Goodwill Promotion. Zero false revenue inflation.');
+        Alert.alert('Free item noted', 'This was saved as a small customer freebie, not a sale.');
       } else {
         const amt = scenario === 'NEGOTIATION' ? 45 : 180;
         const newTx: Transaction = {
           id: `tx-${Date.now()}`,
-          title: scenario === 'NEGOTIATION' ? 'Agreed Price Concession' : '3-Way Hinglish Posting',
-          category: 'Acoustic AI Viterbi',
+          title: scenario === 'NEGOTIATION' ? 'Sale agreed at ₹45' : 'New voice sale',
+          category: 'Voice entry',
           amount: amt,
           isCredit: true,
           time: 'Just now'
@@ -86,15 +87,15 @@ export default function App() {
     } catch {
       // Offline fallback
       if (scenario === 'WALKAWAY') {
-        Alert.alert('🛡️ Walkaway Invariant', 'Customer walked away: 0 debits recorded in CRDT.');
+        Alert.alert('No sale recorded', 'The customer left without buying anything, so no sale was added.');
       } else if (scenario === 'FREEBIE') {
-        Alert.alert('🌿 Freebie Invariant', 'Allocated to Promotion expense.');
+        Alert.alert('Free item noted', 'This was saved as a small customer freebie, not a sale.');
       } else {
         const amt = scenario === 'NEGOTIATION' ? 45 : 180;
         const newTx: Transaction = {
           id: `tx-off-${Date.now()}`,
-          title: scenario === 'NEGOTIATION' ? 'Negotiation Locked (₹45)' : '3-Way Hinglish Decomposition',
-          category: 'Offline Mesh Lamport',
+          title: scenario === 'NEGOTIATION' ? 'Sale agreed at ₹45' : 'New voice sale',
+          category: 'Voice entry',
           amount: amt,
           isCredit: true,
           time: 'Just now'
@@ -110,13 +111,13 @@ export default function App() {
     const soundboxTx: Transaction = {
       id: `tx-soundbox-${Date.now()}`,
       title: 'Paytm Soundbox UPI: ₹140',
-      category: '10m Window Fusion',
+      category: 'UPI payment',
       amount: 140,
       isCredit: true,
       time: 'Just now'
     };
     setTransactions(prev => [soundboxTx, ...prev]);
-    Alert.alert('📲 Soundbox Fusion Match', 'Matched against audio within 10-minute sliding window: Triple-counting eliminated!');
+    Alert.alert('Payment added', 'The UPI payment was added to today’s sales.');
   };
 
   const handleReset = () => {
@@ -124,7 +125,7 @@ export default function App() {
     setProfitMin(165);
     setProfitMax(215);
     setActiveSabotage('CLEAN');
-    Alert.alert('🔄 State Reset', 'CRDT buffers & drawer float reset to initial morning state.');
+    Alert.alert('Day reset', 'Today’s sample balance has been reset.');
   };
 
   return (
@@ -134,7 +135,7 @@ export default function App() {
       {/* HEADER SECTION */}
       <View style={styles.topHeader}>
         <View style={styles.headerLeft}>
-          <Text style={styles.cameraIcon}>📷</Text>
+          <Ionicons name="wallet-outline" size={18} color="#073B3A" style={styles.headerIcon} />
           <Text style={styles.headerTitle}>Gross Balance</Text>
         </View>
         <Text style={styles.headerGrossAmount}>₹{drawerCash.toLocaleString('en-IN')}.00</Text>
@@ -152,7 +153,7 @@ export default function App() {
           <View style={styles.zillaCard}>
             <View style={styles.cardHeaderRow}>
               <View style={styles.cardBrandBlock}>
-                <Text style={styles.cardBrandTriangle}>▲</Text>
+                <Ionicons name="layers-outline" size={14} color="#073B3A" style={styles.cardBrandIcon} />
                 <Text style={styles.cardBrandTitle}>Cascade Card</Text>
               </View>
               {/* Organic Curved Wave Graphic on Right */}
@@ -168,7 +169,7 @@ export default function App() {
             </View>
 
             <View style={styles.cardFooterRow}>
-              <Text style={styles.cardMeshPill}>● MESH SYNCED</Text>
+              <Text style={styles.cardMeshPill}>● UP TO DATE</Text>
               <View style={styles.cardCircles}>
                 <View style={[styles.circleHalf, { backgroundColor: '#EB001B' }]} />
                 <View style={[styles.circleHalf, { backgroundColor: '#F79E1B', marginLeft: -8 }]} />
@@ -179,43 +180,39 @@ export default function App() {
           {/* CARD 2: KURO CARD (ELECTRIC LIME & DEEP PINE SPLIT) */}
           <View style={styles.kuroCard}>
             <View style={styles.kuroTopRow}>
-              <Text style={styles.kuroAsterisk}>✳</Text>
-              <Text style={styles.kuroTitle}>Accrual Profit</Text>
+              <Ionicons name="sparkles-outline" size={17} color="#073B3A" style={styles.kuroAsterisk} />
+              <Text style={styles.kuroTitle}>Today’s Profit</Text>
             </View>
 
             <View style={styles.kuroWavePineBottom}>
               <Text style={styles.kuroAmount}>₹{profitMin} – ₹{profitMax}</Text>
               <View style={styles.kuroFooterRow}>
                 <Text style={styles.kuroCardNumber}>•••• 2981</Text>
-                <Text style={styles.kuroVisaBadge}>CRDT DAG</Text>
+                <Text style={styles.kuroVisaBadge}>ESTIMATE</Text>
               </View>
             </View>
           </View>
         </ScrollView>
 
-        {/* 2. ELECTRIC LIME DISCOVER BANNER (CONCEPTZILLA PROMO BANNER) */}
-        <View style={styles.limeBanner}>
-          <View style={styles.limeBannerTextCol}>
-            <Text style={styles.limeBannerTitle}>0.5% Invariant Engine</Text>
-            <Text style={styles.limeBannerSub}>
-              Survives 1970 clock resets, 88dB noise & offline mesh
-            </Text>
-          </View>
-          <TouchableOpacity onPress={handleReset} style={styles.limeBannerClose}>
-            <Text style={styles.limeCloseIcon}>🔄</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* 3. SHIFT / PERIOD BREAKDOWN TABLE (WHITE CARD) */}
+        {/* Today's balance */}
         <View style={styles.periodTableCard}>
-          <Text style={styles.periodHeader}>Today's Accounting Balance</Text>
+          <View style={styles.balanceHeaderRow}>
+            <View>
+              <Text style={styles.periodHeader}>TODAY’S NET BALANCE</Text>
+              <Text style={styles.balanceHeroAmount}>₹{drawerCash.toLocaleString('en-IN')}.00</Text>
+            </View>
+            <View style={styles.balanceLivePill}>
+              <View style={styles.liveDot} />
+              <Text style={styles.balanceLiveText}>LIVE</Text>
+            </View>
+          </View>
           
           <View style={styles.periodRow}>
             <View style={styles.periodLeft}>
               <View style={styles.arrowCircle}>
                 <Text style={styles.arrowSymbol}>↑</Text>
               </View>
-              <Text style={styles.periodLabel}>Total Cash Sales (Credit)</Text>
+              <Text style={styles.periodLabel}>Money in</Text>
             </View>
             <Text style={styles.periodValueCredit}>+₹2,213.22</Text>
           </View>
@@ -225,7 +222,7 @@ export default function App() {
               <View style={styles.arrowCircle}>
                 <Text style={styles.arrowSymbol}>↓</Text>
               </View>
-              <Text style={styles.periodLabel}>Stall Expenses (Debit)</Text>
+              <Text style={styles.periodLabel}>Money out</Text>
             </View>
             <Text style={styles.periodValueDebit}>-₹1,821.35</Text>
           </View>
@@ -233,16 +230,15 @@ export default function App() {
           <View style={[styles.periodRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
             <View style={styles.periodLeft}>
               <View style={[styles.arrowCircle, { borderColor: '#073B3A' }]}>
-                <Text style={[styles.arrowSymbol, { color: '#073B3A' }]}>%</Text>
+              <Ionicons name="trending-up-outline" size={12} color="#073B3A" />
               </View>
-              <Text style={[styles.periodLabel, { fontWeight: '700' }]}>True Real Accrual</Text>
+              <Text style={[styles.periodLabel, { fontWeight: '700' }]}>Net balance</Text>
             </View>
             <Text style={styles.periodValueAccrual}>+₹391.87</Text>
           </View>
         </View>
 
-        {/* 4. MONEY TRANSFERS (DEEP PINE TEAL SQUIRCLES WITH ELECTRIC LIME ICONS) */}
-        <Text style={styles.sectionTitle}>Engine Operations</Text>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.tealActionsRow}>
           {/* ACTION 1: VOICE UTTERANCE */}
           <TouchableOpacity
@@ -251,9 +247,9 @@ export default function App() {
             disabled={loading}
           >
             <View style={styles.limeIconBox}>
-              <Text style={styles.limeIconEmoji}>🎙️</Text>
+              <Ionicons name="mic-outline" size={22} color="#073B3A" />
             </View>
-            <Text style={styles.tealCardText}>{loading ? 'Parsing...' : 'Voice Utter'}</Text>
+            <Text style={styles.tealCardText}>{loading ? 'Adding...' : 'Voice sale'}</Text>
           </TouchableOpacity>
 
           {/* ACTION 2: EOD RECONCILE */}
@@ -262,9 +258,9 @@ export default function App() {
             onPress={() => setShowEOD(true)}
           >
             <View style={styles.limeIconBox}>
-              <Text style={styles.limeIconEmoji}>⚖️</Text>
+              <Ionicons name="checkmark-done-outline" size={22} color="#073B3A" />
             </View>
-            <Text style={styles.tealCardText}>EOD Settle</Text>
+            <Text style={styles.tealCardText}>Close register</Text>
           </TouchableOpacity>
 
           {/* ACTION 3: SOUNDBOX FUSION */}
@@ -273,20 +269,19 @@ export default function App() {
             onPress={handleSimulateSoundbox}
           >
             <View style={styles.limeIconBox}>
-              <Text style={styles.limeIconEmoji}>📲</Text>
+              <Ionicons name="phone-portrait-outline" size={21} color="#073B3A" />
             </View>
             <Text style={styles.tealCardText}>Soundbox</Text>
           </TouchableOpacity>
         </View>
 
-        {/* 5. JUDGE SABOTAGE HOSTILE CONDITIONS (SEGMENTED TABS) */}
-        <Text style={styles.sectionTitle}>Hostile Sabotage Attacks</Text>
+        <Text style={styles.sectionTitle}>System Security</Text>
         <View style={styles.sabotageTabsRow}>
           {[
-            { id: 'CLEAN', label: '🟢 Clean' },
-            { id: 'NOISE', label: '🔊 85dB Noise' },
-            { id: 'CLOCK', label: '⏱️ 1970 Clock' },
-            { id: 'AIRGAP', label: '📡 Air-Gap' }
+            { id: 'CLEAN', label: 'All good' },
+            { id: 'NOISE', label: 'Noisy area' },
+            { id: 'CLOCK', label: 'Time reset' },
+            { id: 'AIRGAP', label: 'Offline' }
           ].map(s => (
             <TouchableOpacity
               key={s.id}
@@ -310,22 +305,22 @@ export default function App() {
         <View style={styles.sabotageVerdictCard}>
           {activeSabotage === 'CLEAN' && (
             <Text style={styles.sabotageVerdictText}>
-              🛡️ <Text style={{ fontWeight: '800' }}>Clean Path:</Text> Double-entry balance conserved. Sum(Debits) ≡ Sum(Credits).
+              <Text style={{ fontWeight: '800' }}>Everything looks good.</Text> Your sales and expenses are saved safely.
             </Text>
           )}
           {activeSabotage === 'NOISE' && (
             <Text style={[styles.sabotageVerdictText, { color: '#073B3A' }]}>
-              🛡️ <Text style={{ fontWeight: '800' }}>85dB Noise Attack:</Text> Competitor models hallucinate fake orders. Cascade engine switches to UNKNOWN_ABSTAIN with zero ledger corruption.
+              <Text style={{ fontWeight: '800' }}>Noisy area detected.</Text> We’ll ask before adding anything we cannot hear clearly.
             </Text>
           )}
           {activeSabotage === 'CLOCK' && (
             <Text style={[styles.sabotageVerdictText, { color: '#073B3A' }]}>
-              🛡️ <Text style={{ fontWeight: '800' }}>1970 Battery Reset:</Text> Hardware clock resets to epoch. Lamport Causal DAG supersedes wall time.
+              <Text style={{ fontWeight: '800' }}>Time updated.</Text> Your recent entries are still in the right order.
             </Text>
           )}
           {activeSabotage === 'AIRGAP' && (
             <Text style={[styles.sabotageVerdictText, { color: '#073B3A' }]}>
-              🛡️ <Text style={{ fontWeight: '800' }}>Air-Gapped Standalone:</Text> 100% On-device Viterbi HMM in &lt;22MB RAM with 1.8ms latency.
+              <Text style={{ fontWeight: '800' }}>Offline mode is on.</Text> Keep working — your entries will stay on this phone.
             </Text>
           )}
         </View>
@@ -370,30 +365,29 @@ export default function App() {
           </View>
         </View>
 
-        {/* 7. QUICK TEST PILLS (VOICE NEGOTIATION LAB) */}
-        <Text style={styles.sectionTitle}>One-Tap Judge Scenarios</Text>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.scenariosFlow}>
           <TouchableOpacity style={styles.scenarioPill} onPress={() => handleSimulateUtterance('MULTI_POST')}>
-            <Text style={styles.scenarioPillText}>⚡ 3-Way Hinglish</Text>
+            <Text style={styles.scenarioPillText}>Add mixed sale</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.scenarioPill} onPress={() => handleSimulateUtterance('NEGOTIATION')}>
-            <Text style={styles.scenarioPillText}>🤝 Settle at ₹45</Text>
+            <Text style={styles.scenarioPillText}>Set price at ₹45</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.scenarioPill} onPress={() => handleSimulateUtterance('WALKAWAY')}>
-            <Text style={styles.scenarioPillText}>🚶 Walkaway (0 entries)</Text>
+            <Text style={styles.scenarioPillText}>Customer left</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.scenarioPill} onPress={() => handleSimulateUtterance('FREEBIE')}>
-            <Text style={styles.scenarioPillText}>🌿 Freebie Mirchi</Text>
+            <Text style={styles.scenarioPillText}>Add a free item</Text>
           </TouchableOpacity>
         </View>
 
         {/* 8. RECENT TRANSACTIONS */}
-        <Text style={styles.sectionTitle}>Recent Payments</Text>
+        <Text style={styles.sectionTitle}>Recent Activity</Text>
         <View style={styles.txListWrapper}>
           {transactions.map(tx => (
             <View key={tx.id} style={styles.txItemCard}>
               <View style={styles.txIconSquare}>
-                <Text style={styles.txEmoji}>{tx.isCredit ? '↓' : '↑'}</Text>
+                <Ionicons name={tx.isCredit ? 'arrow-down-outline' : 'arrow-up-outline'} size={18} color="#073B3A" />
               </View>
               <View style={styles.txMeta}>
                 <Text style={styles.txTitleText}>{tx.title}</Text>
@@ -406,20 +400,6 @@ export default function App() {
           ))}
         </View>
 
-        {/* 9. CONCEPTZILLA ICONIC PILL CTA BUTTON (ELECTRIC LIME WITH CIRCULAR ARROW) */}
-        <TouchableOpacity
-          style={styles.conceptzillaCtaBtn}
-          onPress={() => handleSimulateUtterance('MULTI_POST')}
-          disabled={loading}
-        >
-          <Text style={styles.ctaBtnText}>
-            {loading ? 'PARSING SPEECH...' : 'RECORD STREET UTTERANCE'}
-          </Text>
-          <View style={styles.ctaArrowCircle}>
-            <Text style={styles.ctaArrowEmoji}>↗</Text>
-          </View>
-        </TouchableOpacity>
-
         <View style={{ height: 80 }} />
       </ScrollView>
 
@@ -427,17 +407,27 @@ export default function App() {
       <View style={styles.bottomDockContainer}>
         <View style={styles.dockPill}>
           <TouchableOpacity style={styles.dockItem} onPress={() => setCurrentScreen('HOME')}>
-            <Text style={[styles.dockIcon, currentScreen === 'HOME' && styles.dockIconActive]}>🏠</Text>
+            <Ionicons name={currentScreen === 'HOME' ? 'home' : 'home-outline'} size={21} color={currentScreen === 'HOME' ? '#073B3A' : '#9CA3AF'} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.dockItem} onPress={() => setShowEOD(true)}>
-            <Text style={styles.dockIcon}>⇄</Text>
+            <Ionicons name="swap-horizontal-outline" size={21} color="#9CA3AF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.dockMicButton}
+            onPress={() => handleSimulateUtterance('MULTI_POST')}
+            disabled={loading}
+            accessibilityLabel="Add a sale by voice"
+          >
+            <View style={styles.dockMicPulse} />
+            <Ionicons name={loading ? 'hourglass-outline' : 'mic'} size={23} color="#073B3A" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.dockItem} onPress={() => {
-            Alert.alert('👤 Vendor Khata & Audit', 'Stall #01 (Akash Rawat) • SQLite CRDT Monotonic Verified • 15 Tables Active.');
+            Alert.alert('Your shop', 'Manage your shop details and account settings here.');
           }}>
-            <Text style={styles.dockIcon}>👤</Text>
+            <Ionicons name="person-outline" size={21} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
       </View>
@@ -448,7 +438,7 @@ export default function App() {
         onClose={() => setShowEOD(false)}
         confirmedUpiTotal={140}
         onReconciliationComplete={(res) => {
-          Alert.alert('✅ Cash Drawer Reconciled', `Matched ${res.acceptedTransactions?.length} ambiguous sales. Slack discrepancy: ₹${res.slackVariableValue}`);
+          Alert.alert('Register closed', `${res.acceptedTransactions?.length} sales were confirmed. Difference: ₹${res.slackVariableValue}`);
           setShowEOD(false);
         }}
       />
@@ -484,8 +474,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  cameraIcon: {
-    fontSize: 16,
+  headerIcon: {
     marginRight: 6,
   },
   headerTitle: {
@@ -536,9 +525,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  cardBrandTriangle: {
-    fontSize: 11,
-    color: '#111827',
+  cardBrandIcon: {
     marginRight: 4,
   },
   cardBrandTitle: {
@@ -713,18 +700,57 @@ const styles = StyleSheet.create({
 
   /* 3. PERIOD BREAKDOWN TABLE */
   periodTableCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 20,
-    padding: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#DDECE7',
     marginBottom: 18,
+    shadowColor: '#073B3A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.07,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  balanceHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
   },
   periodHeader: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: 11,
+    color: '#6E827D',
     fontWeight: '700',
-    marginBottom: 12,
+    letterSpacing: 0.8,
+  },
+  balanceHeroAmount: {
+    marginTop: 5,
+    fontSize: 30,
+    color: '#073B3A',
+    fontWeight: '900',
+    letterSpacing: -0.8,
+  },
+  balanceLivePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1FFE5',
+    borderRadius: 14,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#79AF00',
+    marginRight: 5,
+  },
+  balanceLiveText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    color: '#376300',
   },
   periodRow: {
     flexDirection: 'row',
@@ -804,9 +830,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
-  },
-  limeIconEmoji: {
-    fontSize: 20,
   },
   tealCardText: {
     fontSize: 11,
@@ -982,11 +1005,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  txEmoji: {
-    fontSize: 16,
-    color: '#111827',
-    fontWeight: '800',
-  },
   txMeta: {
     flex: 1,
   },
@@ -1011,43 +1029,6 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
 
-  /* 9. CONCEPTZILLA CTA BUTTON */
-  conceptzillaCtaBtn: {
-    backgroundColor: '#E2FD52',
-    borderRadius: 30,
-    paddingVertical: 8,
-    paddingLeft: 22,
-    paddingRight: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    shadowColor: '#E2FD52',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  ctaBtnText: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#073B3A',
-    letterSpacing: 0.5,
-  },
-  ctaArrowCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#073B3A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaArrowEmoji: {
-    color: '#E2FD52',
-    fontSize: 18,
-    fontWeight: '900',
-  },
-
   /* 10. BOTTOM DOCK */
   bottomDockContainer: {
     position: 'absolute',
@@ -1061,7 +1042,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 30,
     paddingVertical: 12,
-    paddingHorizontal: 28,
+    paddingHorizontal: 26,
     width: '100%',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -1074,7 +1055,33 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   dockItem: {
-    padding: 4,
+    padding: 7,
+  },
+  dockMicButton: {
+    position: 'absolute',
+    left: '50%',
+    top: -20,
+    width: 56,
+    height: 56,
+    marginLeft: -28,
+    borderRadius: 28,
+    backgroundColor: '#E2FD52',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#073B3A',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  dockMicPulse: {
+    position: 'absolute',
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    backgroundColor: '#E2FD52',
+    opacity: 0.18,
+    transform: [{ scale: 1.08 }],
   },
   dockIcon: {
     fontSize: 20,
