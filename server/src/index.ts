@@ -6,6 +6,7 @@ import http from 'http';
 import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
 import { vendorRouter } from './routes/vendor';
+import { initializeDatabase } from './db/database';
 
 const app = express();
 const server = http.createServer(app);
@@ -45,6 +46,8 @@ app.post('/api/sabotage', (req, res) => {
 
 const PORT = Number(process.env.PORT) || 4000;
 const HOST = process.env.HOST || '0.0.0.0';
+
+initializeDatabase();
 
 server.listen(PORT, HOST, () => {
   console.log(`server on port ${PORT}`);
