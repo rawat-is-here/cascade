@@ -132,8 +132,14 @@ function runContinuousSLMPipelineSuite() {
   // -------------------------------------------------------------
   // TEST 3: Indefinite Continuous Audio Stream & 4-Way Diarizer
   // -------------------------------------------------------------
-  console.log('\n--- TEST 3: Indefinite Continuous Background Audio Stream ---');
+  console.log('\n--- TEST 3: Indefinite Continuous Background Audio Stream & STT Confidence ---');
   const audioListener = new UnifiedAudioStreamListener(upiValidator);
+
+  // Hook instant vendor confirmation callback
+  const vendorAlerts: any[] = [];
+  audioListener.setOnConfirmationNeeded((req) => {
+    vendorAlerts.push(req);
+  });
 
   // Vendor taps "Start Shift"
   audioListener.startShift(baseTime);
@@ -144,51 +150,77 @@ function runContinuousSLMPipelineSuite() {
   audioListener.enrollVendor(vendorEmb);
 
   // Stream in dialogues throughout the shift:
-  // Session 1: Customer 1 bargaining on Tomatoes
+  // Session 1: Customer 1 bargaining on Tomatoes (High confidence >= 90%)
   audioListener.ingestAudioChunk({
     timestamp: baseTime + 100_000,
     transcribedText: 'tamatar kitne ka',
+    sttConfidence: 0.96,
     audioEmbedding192: new Array(192).fill(0.5) // non-vendor voice -> Cust 1
   });
   audioListener.ingestAudioChunk({
     timestamp: baseTime + 102_000,
     transcribedText: '40 ka diya',
+    sttConfidence: 0.98,
     audioEmbedding192: vendorEmb // vendor voice
   });
   audioListener.ingestAudioChunk({
     timestamp: baseTime + 104_000,
     transcribedText: 'nahi 30 lagao',
+    sttConfidence: 0.94,
     audioEmbedding192: new Array(192).fill(0.5) // Cust 1
   });
   audioListener.ingestAudioChunk({
     timestamp: baseTime + 106_000,
     transcribedText: 'theek hai le jao',
+    sttConfidence: 0.97,
     audioEmbedding192: vendorEmb // vendor concession
   });
   audioListener.ingestAudioChunk({
     timestamp: baseTime + 108_000,
     transcribedText: 'aadha kilo kar do',
+    sttConfidence: 0.95,
     audioEmbedding192: new Array(192).fill(0.5) // Cust 1
   });
+
+  // Ambiguous Low Confidence Turn (<90% threshold, e.g. 72% noisy mumble)
+  const lowConfTurn = audioListener.ingestAudioChunk({
+    timestamp: baseTime + 115_000,
+    transcribedText: 'shor sharaba kuch bola',
+    sttConfidence: 0.72,
+    audioEmbedding192: new Array(192).fill(0.5)
+  });
+  if (!lowConfTurn || lowConfTurn.confirmationStatus !== 'REQUIRES_VENDOR_CONFIRMATION') {
+    throw new Error('TEST 3 FAILED: Turn with <90% confidence was not flagged for vendor confirmation!');
+  }
+  if (vendorAlerts.length !== 1) {
+    throw new Error('TEST 3 FAILED: Instant vendor confirmation alert was not triggered!');
+  }
+  console.log(`  ✓ Low Confidence Turn Flagged (72% < 90%): Triggered Vendor Confirmation Alert: "${vendorAlerts[0].suggestedClarification}"`);
+
+  // Vendor rejects the hallucinated/noisy turn right away
+  audioListener.rejectTranscript(lowConfTurn.id);
+  console.log(`  ✓ Vendor Rejected Hallucinated Turn: Discarded with 0 ledger impact`);
 
   // Time gap (20 seconds later) -> Session 2: Customer 2 ordering Potatoes
   audioListener.ingestAudioChunk({
     timestamp: baseTime + 130_000,
     transcribedText: '2 kilo aalu do',
+    sttConfidence: 0.96,
     audioEmbedding192: new Array(192).fill(-0.4) // non-vendor voice -> Cust 2
   });
   audioListener.ingestAudioChunk({
     timestamp: baseTime + 132_000,
     transcribedText: '50 rupaye ho gaye',
+    sttConfidence: 0.99,
     audioEmbedding192: vendorEmb // vendor quote
   });
 
   // Vendor taps "End Shift"
   audioListener.stopShift(baseTime + 200_000);
   const transcripts = audioListener.getShiftTranscripts();
-  console.log(`  Total Shift Utterances Logged in SQLite: ${transcripts.length}`);
-  if (transcripts.length !== 7) throw new Error(`Expected 7 logged transcripts, got ${transcripts.length}`);
-  console.log('  ✓ Continuous Background Logging Verified: 7 turns diarized and buffered');
+  console.log(`  Total High-Confidence (>=90%) Utterances Passed to EOD: ${transcripts.length}`);
+  if (transcripts.length !== 7) throw new Error(`Expected 7 logged confident transcripts, got ${transcripts.length}`);
+  console.log('  ✓ Continuous Background Logging & 90% Confidence Filter Verified: Exactly 7 high-confidence turns retained');
 
   // -------------------------------------------------------------
   // TEST 4: Night EOD Qwen Batch Pass (Zero Daytime Battery Drain)

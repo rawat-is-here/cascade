@@ -6,7 +6,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ViterbiNegotiatorEngine } from '../core/linguistics/viterbi_negotiator.ts';
+import { QwenEODBatchInterpreter } from '../core/slm/qwen_interpreter.ts';
 import type { NegotiationDialogueAct } from '../shared/types.ts';
 
 interface Turn {
@@ -59,40 +59,19 @@ export function evaluateProductionAI() {
     const noise = d.noiseDb;
     noiseStats[noise].total++;
 
-    const engine = new ViterbiNegotiatorEngine();
-    let finalState: any = null;
+    const sessionTurns = d.turns.map((turn, idx) => ({
+      audioSliceId: `slice_${idx}`,
+      timestamp: idx * 1000,
+      rawText: turn.text,
+      speakerClassification: turn.role,
+      confidence: 0.95
+    }));
 
-    for (const turn of d.turns) {
-      initAct(turn.act);
-      const res = engine.processTurn({
-        speakerRole: turn.role,
-        customerId: d.customerId,
-        utteranceText: turn.text
-      });
-      finalState = res;
-
-      // Classify predicted act based on state transition
-      let predAct: string = 'PRICE_INQUIRY';
-      if (res.isWalkaway) predAct = 'WALK_AWAY';
-      else if (res.isFreebie) predAct = 'FREEBIE_REQUEST';
-      else if (res.currentState === 'VENDOR_QUOTE') predAct = 'VENDOR_QUOTE';
-      else if (res.currentState === 'CUSTOMER_COUNTER') predAct = 'CUSTOMER_COUNTER';
-      else if (res.currentState === 'VENDOR_CONCESSION') predAct = 'VENDOR_CONCESSION';
-      else if (res.currentState === 'SETTLED' || res.currentState === 'QUANTITY_LOCKED') predAct = 'QUANTITY_SPEC';
-      else if (turn.act === 'VALUE_ORDER') predAct = 'VALUE_ORDER';
-      else predAct = turn.act;
-
-      initAct(predAct);
-      if (predAct === turn.act) {
-        actStats[turn.act].tp++;
-      } else {
-        actStats[predAct].fp++;
-        actStats[turn.act].fn++;
-      }
-    }
-
+    const parsedTx = QwenEODBatchInterpreter.parseSessionDialogue(d.dialogue_id, d.customerId, sessionTurns);
     const gt = d.ground_truth;
-    const resolvedCash = finalState?.derivedTotalAmount || 0;
+    const resolvedCash = parsedTx?.derivedTotalCash || 0;
+    const isWalkaway = parsedTx?.isWalkaway ?? false;
+    const isFreebie = parsedTx?.isFreebie ?? false;
 
     // Check accuracy
     const cashDiff = Math.abs(resolvedCash - gt.expectedDerivedCash);
@@ -101,8 +80,8 @@ export function evaluateProductionAI() {
       noiseStats[noise].correct++;
     }
 
-    if (finalState?.isWalkaway === gt.isWalkaway) walkawayMatches++;
-    if (finalState?.isFreebie === gt.isFreebie) freebieMatches++;
+    if (isWalkaway === gt.isWalkaway) walkawayMatches++;
+    if (isFreebie === gt.isFreebie) freebieMatches++;
   }
 
   const cashAccuracy = (exactCashMatches / totalDialogues) * 100;

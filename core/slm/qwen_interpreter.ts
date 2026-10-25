@@ -125,6 +125,9 @@ ${sessionDialogue}
 
     for (const t of transcripts) {
       if (t.speakerClassification === 'SOUNDBOX_CHIME') continue; // Chimes handled via UPI validator
+      if (t.processedStatus === 'DISCARDED' || t.confirmationStatus === 'VENDOR_REJECTED') continue;
+      // Skip low-confidence unconfirmed turns (< 90% confidence threshold)
+      if (t.sttConfidence !== undefined && t.sttConfidence < 0.90 && t.confirmationStatus !== 'VENDOR_CONFIRMED') continue;
 
       const timeGap = lastTime > 0 ? t.timestamp - lastTime : 0;
       const isNewCust = t.speakerClassification !== 'VENDOR' && t.speakerClassification !== currentCustomer && currentCustomer !== '';
@@ -184,7 +187,7 @@ ${sessionDialogue}
 
     for (const s of sessions) {
       // Simulate/invoke Qwen2.5-0.5B-Instruct extraction over session
-      const parsed = this.parseSessionDialogue(s.sessionId, s.customerTag, s.turns);
+      const parsed = QwenEODBatchInterpreter.parseSessionDialogue(s.sessionId, s.customerTag, s.turns, this.wholesaleManager);
       if (parsed && !parsed.isWalkaway && parsed.derivedTotalCash > 0) {
         resolvedTransactions.push(parsed);
         totalDynamicRevenue += parsed.derivedTotalCash;
@@ -284,12 +287,14 @@ ${sessionDialogue}
   }
 
   /**
-   * Internal Qwen extraction parser (Decouples semantic extraction from math).
+   * Qwen extraction parser (Decouples semantic extraction from math).
+   * Static & callable across tests, benchmarks, and EOD batch passes.
    */
-  private parseSessionDialogue(
+  public static parseSessionDialogue(
     sessionId: string,
     customerTag: string,
-    turns: RawTranscriptRecord[]
+    turns: RawTranscriptRecord[],
+    wholesaleManager?: WholesaleCostManager
   ): QwenExtractedTransaction | null {
     let item = 'unknown';
     let vendorQuote: number | undefined;
@@ -372,7 +377,27 @@ ${sessionDialogue}
     } else {
       // Rate negotiation: vendor conceded to customer counter -> counter rate. Else -> initial vendor quote.
       agreedRate = (vendorConceded && customerCounter) ? customerCounter : (vendorQuote || customerCounter || 0);
-      if (agreedRate <= 0) return null;
+      if (agreedRate <= 0) {
+        if (isFreebie) {
+          return {
+            sessionId,
+            customerTag,
+            item: item !== 'unknown' ? item : 'freebie_herbs',
+            vendorConceded: true,
+            agreedRate: 0,
+            quantity: 0,
+            unit,
+            derivedTotalCash: 0,
+            wholesaleUnitCost: 0,
+            cogsBurned: 0,
+            grossProfit: 0,
+            marginPercentage: 0,
+            isWalkaway: false,
+            isFreebie: true
+          };
+        }
+        return null;
+      }
 
       // DECOUPLED DETERMINISTIC MATH GUARANTEE:
       // Code multiplies R_agreed * Q strictly, never trusting LLM internal arithmetic!
@@ -380,7 +405,7 @@ ${sessionDialogue}
     }
 
     // Pull wholesale unit cost basis from morning bill
-    const costBasis = this.wholesaleManager.getCostBasis(item);
+    const costBasis = wholesaleManager ? wholesaleManager.getCostBasis(item) : undefined;
     const wholesaleUnitCost = costBasis ? costBasis.effectiveUnitCost : 0;
     const cogsBurned = Math.round(quantity * wholesaleUnitCost * 100) / 100;
     const grossProfit = Math.round((derivedTotalCash - cogsBurned) * 100) / 100;
@@ -389,8 +414,8 @@ ${sessionDialogue}
       : 0;
 
     // Burn inventory
-    if (quantity > 0) {
-      this.wholesaleManager.recordInventoryBurn(item, quantity);
+    if (quantity > 0 && wholesaleManager) {
+      wholesaleManager.recordInventoryBurn(item, quantity);
     }
 
     return {
