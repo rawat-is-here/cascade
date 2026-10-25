@@ -15,5 +15,8 @@
     "mobile"
   ],
   "author": "Team Cascade (Akash, Thackrey, Aryan, Manthan)",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "expo": "^57.0.31"
+  }
 }

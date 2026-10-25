@@ -1,41 +1,38 @@
-import { AuditRecord, StateStore } from './schema';
-import { DataPayload, EngineResult } from '../../../shared/types';
+import { VendorEvent } from '../../../shared/types';
 
-/**
- * Aryan's Database & Persistence Layer
- * Provides high-speed in-memory caching with append-only causal audit ledger.
- */
+export interface AuditRecord {
+  id: string;
+  ts: number;
+  event: VendorEvent;
+  status: 'ok' | 'ignored';
+}
+
 export class LedgerStorage {
-  private store: StateStore = {
-    records: new Map(),
-    logicalClock: 0
-  };
+  records: Map<string, AuditRecord> = new Map();
+  clock = 0;
 
-  public save(payload: DataPayload, result: EngineResult): AuditRecord {
-    this.store.logicalClock++;
-    const record: AuditRecord = {
-      id: `rec-${Date.now()}-${this.store.logicalClock}`,
-      createdAt: Date.now(),
-      payload,
-      result,
-      committedState: result.abstained ? 'ABSTAINED' : 'COMMITTED'
+  save(event: VendorEvent): AuditRecord {
+    this.clock++;
+    const rec: AuditRecord = {
+      id: 'rec_' + Date.now() + '_' + this.clock,
+      ts: Date.now(),
+      event,
+      status: 'ok'
     };
 
-    this.store.records.set(record.id, record);
-    return record;
+    this.records.set(rec.id, rec);
+    return rec;
   }
 
-  public getAll(): AuditRecord[] {
-    return Array.from(this.store.records.values());
+  all() {
+    return Array.from(this.records.values());
   }
 
-  public getStats() {
-    const all = this.getAll();
+  stats() {
+    const list = this.all();
     return {
-      total: all.length,
-      committed: all.filter(r => r.committedState === 'COMMITTED').length,
-      abstained: all.filter(r => r.committedState === 'ABSTAINED').length,
-      latestLogicalClock: this.store.logicalClock
+      total: list.length,
+      clock: this.clock
     };
   }
 }

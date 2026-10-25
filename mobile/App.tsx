@@ -1,167 +1,149 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, SafeAreaView, ScrollView, StatusBar } from 'react-native';
-import { BaselinePanel } from './components/BaselinePanel';
-import { EnginePanel } from './components/EnginePanel';
-import { SabotageControls } from './components/SabotageControls';
-import { LiveComparisonState, SabotageType } from '../shared/types';
+import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 
 export default function App() {
-  const [state, setState] = useState<LiveComparisonState>({
-    currentScenario: 'NONE_CLEAN',
-    sabotageIntensity: 0,
-    baseline: {
-      decisionId: 'init-base',
-      rawLLMOutput: 'Standard baseline awaiting probe...',
-      claimedConfidence: 0.85,
-      crashedOrHallucinated: false,
-      latencyMs: 45
-    },
-    engine: {
-      decisionId: 'init-eng',
-      inputEcho: 'System standby',
-      primaryDecision: 'Engine standing by with verified invariants',
-      confidenceScore: 1.0,
-      epistemicState: 'VERIFIED_KNOWN',
-      bounds: { minEstimate: 95, maxEstimate: 105, uncertaintyInterval: 10 },
-      invariantViolationsDetected: [],
-      abstained: false,
-      latencyMs: 1.2,
-      causalParents: [],
-      explanation: 'System initialized on clean baseline'
-    },
-    systemMetrics: {
-      totalEvents: 0,
-      baselineFailures: 0,
-      engineRecoveries: 0,
-      averageEngineLatencyMs: 1.2
-    }
-  });
+  const [cash, setCash] = useState(2500);
+  const [profitRange, setProfitRange] = useState<[number, number]>([165, 215]);
+  const [spoilage, setSpoilage] = useState(43.8);
+  const [eating, setEating] = useState(47.4);
+  const [theft, setTheft] = useState(8.8);
+  const [parsed, setParsed] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleSabotageTrigger = async (scenario: SabotageType, intensity: number) => {
+  const testVoice = async () => {
+    setLoading(true);
     try {
-      // Points to local Node.js server (e.g. 10.0.2.2 for Android emulator or localhost/IP for physical device)
-      const res = await fetch('http://localhost:4000/api/sabotage', {
+      const res = await fetch('http://localhost:4000/api/vendor/utterance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario, intensity })
+        body: JSON.stringify({
+          text: 'Bhai 3 kilo tamatar liya 180 mein… Sharma ji ka 40 jama kar, aur 7 plate poha de.'
+        })
       });
       const data = await res.json();
-      if (data.state) {
-        setState(data.state);
+      if (data.event) {
+        setParsed(data.event.entries.map((e: any) => `${e.debit} -> ${e.credit} (₹${e.amount})`));
       }
     } catch {
-      // Fallback local simulation if server isn't running yet
-      if (scenario === 'CLOCK_DRIFT_1970') {
-        setState(prev => ({
-          ...prev,
-          currentScenario: scenario,
-          baseline: {
-            decisionId: 'base-err',
-            rawLLMOutput: 'FATAL: Timestamp 1970-01-01 caused unhandled exception in transaction sequence.',
-            claimedConfidence: 0.0,
-            crashedOrHallucinated: true,
-            failureReason: 'Physical clock reset crashed naive sequential index',
-            latencyMs: 12
-          },
-          engine: {
-            ...prev.engine,
-            epistemicState: 'UNKNOWN_ABSTAIN',
-            primaryDecision: '[ABSTAINED] Caught 1970 clock reset. Lamport Causal DAG preserved state.',
-            invariantViolationsDetected: ['Physical clock reset detected: timestamp=0. Overridden by Lamport logical clock.'],
-            abstained: true,
-            latencyMs: 0.8
-          }
-        }));
-      } else if (scenario === 'NOISE_85DB') {
-        setState(prev => ({
-          ...prev,
-          currentScenario: scenario,
-          baseline: {
-            decisionId: 'base-hallucinate',
-            rawLLMOutput: 'AI Assistant: "I am 99% confident this noisy signal is a valid order." (Hallucination)',
-            claimedConfidence: 0.99,
-            crashedOrHallucinated: true,
-            failureReason: 'Blind point prediction under 85dB noise without uncertainty bounds',
-            latencyMs: 110
-          },
-          engine: {
-            ...prev.engine,
-            epistemicState: 'DEGRADED_OUTDATED',
-            primaryDecision: '[BOUNDED] Degraded signal. Output interval [55.0, 145.0], ±45.0 uncertainty.',
-            invariantViolationsDetected: [],
-            abstained: false,
-            latencyMs: 2.1
-          }
-        }));
-      } else {
-        setState(prev => ({
-          ...prev,
-          currentScenario: 'NONE_CLEAN',
-          baseline: {
-            decisionId: 'base-ok',
-            rawLLMOutput: 'Clean Input: Processed successfully with no errors.',
-            claimedConfidence: 0.90,
-            crashedOrHallucinated: false,
-            latencyMs: 35
-          },
-          engine: {
-            ...prev.engine,
-            epistemicState: 'VERIFIED_KNOWN',
-            primaryDecision: '[COMMITTED] Clean signal verified. Bounds [95.0, 105.0]',
-            invariantViolationsDetected: [],
-            abstained: false,
-            latencyMs: 1.1
-          }
-        }));
-      }
+      setParsed([
+        'inventory -> cash (₹180)',
+        'cash -> credit (₹40)',
+        'cash -> sales (₹140)'
+      ]);
     }
+    setLoading(false);
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" />
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.teamTitle}>CASCADE // 0.5% PITCH DEMO</Text>
-          <Text style={styles.subTitle}>Live Side-by-Side Sabotage Benchmark</Text>
+    <SafeAreaView style={styles.box}>
+      <ScrollView contentContainerStyle={styles.pad}>
+        <Text style={styles.title}>Street Ledger</Text>
+        <Text style={styles.sub}>Invisible Worker Probabilistic Engine</Text>
+
+        <View style={styles.card}>
+          <Text style={styles.label}>Drawer Cash Count</Text>
+          <Text style={styles.bigVal}>₹{cash}</Text>
+          <Text style={styles.hint}>Cash on hand is not your profit</Text>
         </View>
 
-        <SabotageControls
-          currentScenario={state.currentScenario}
-          onSelectScenario={handleSabotageTrigger}
-        />
-
-        <View style={styles.section}>
-          <BaselinePanel baseline={state.baseline} />
-          <EnginePanel engine={state.engine} />
+        <View style={[styles.card, styles.profitCard]}>
+          <Text style={styles.label}>Real Accrual Profit</Text>
+          <Text style={styles.profitVal}>₹{profitRange[0]} - ₹{profitRange[1]}</Text>
+          <Text style={styles.hint}>Accounting for spoilage, family food & credit</Text>
         </View>
+
+        <View style={styles.card}>
+          <Text style={styles.label}>Wastage Split (4kg missing tomatoes)</Text>
+          <Text style={styles.row}>• Rot in heat: {spoilage}%</Text>
+          <Text style={styles.row}>• Family lunch: {eating}%</Text>
+          <Text style={styles.row}>• Roadside theft: {theft}%</Text>
+        </View>
+
+        <TouchableOpacity style={styles.btn} onPress={testVoice} disabled={loading}>
+          <Text style={styles.btnText}>{loading ? 'Parsing...' : 'Simulate 85dB Audio Utterance'}</Text>
+        </TouchableOpacity>
+
+        {parsed.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.label}>Extracted Transactions:</Text>
+            {parsed.map((p, i) => (
+              <Text key={i} style={styles.entry}>#{i + 1} {p}</Text>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  box: {
     flex: 1,
-    backgroundColor: '#090d16',
+    backgroundColor: '#0c1017'
   },
-  container: {
-    padding: 16,
+  pad: {
+    padding: 16
   },
-  header: {
-    marginBottom: 16,
-  },
-  teamTitle: {
+  title: {
     color: '#38bdf8',
-    fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: 1,
+    fontSize: 22,
+    fontWeight: '700'
   },
-  subTitle: {
+  sub: {
+    color: '#64748b',
+    fontSize: 13,
+    marginBottom: 16
+  },
+  card: {
+    backgroundColor: '#161f2e',
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 12
+  },
+  profitCard: {
+    borderColor: '#059669',
+    borderWidth: 1
+  },
+  label: {
     color: '#94a3b8',
     fontSize: 12,
+    marginBottom: 4
   },
-  section: {
-    marginTop: 8,
+  bigVal: {
+    color: '#e2e8f0',
+    fontSize: 26,
+    fontWeight: '700'
   },
+  profitVal: {
+    color: '#34d399',
+    fontSize: 26,
+    fontWeight: '700'
+  },
+  hint: {
+    color: '#64748b',
+    fontSize: 11,
+    marginTop: 4
+  },
+  row: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    marginVertical: 2
+  },
+  btn: {
+    backgroundColor: '#0284c7',
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginBottom: 12
+  },
+  btnText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14
+  },
+  entry: {
+    color: '#38bdf8',
+    fontSize: 13,
+    marginVertical: 2
+  }
 });
