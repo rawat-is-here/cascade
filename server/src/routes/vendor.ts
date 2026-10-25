@@ -277,6 +277,64 @@ vendorRouter.post('/audio/turn', (req, res) => {
  * 3. Dual UPI Cross-Validation (Chime + Notification)
  * POST /api/vendor/upi/event
  */
+
+/**
+ * Verification Stage: Get Pending Unverified Soundbox / SMS Queue
+ * GET /api/vendor/upi/verification-queue
+ */
+vendorRouter.get("/upi/verification-queue", (req, res) => {
+  try {
+    const queue = upiValidator.getPendingQueue();
+    res.json({
+      ok: true,
+      pendingChimes: queue.chimes,
+      pendingNotifications: queue.notifications,
+      totalPending: queue.chimes.length + queue.notifications.length
+    });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/**
+ * Verification Stage: Vendor Manual Action (Confirm / Quarantine / Ignore)
+ * POST /api/vendor/upi/verify-action
+ */
+vendorRouter.post("/upi/verify-action", (req, res) => {
+  try {
+    const { targetId, action, targetType } = req.body;
+
+    let result: any = null;
+    if (action === "CONFIRM_MY_SALE") {
+      if (targetType === "NOTIFICATION") {
+        result = upiValidator.manuallyConfirmNotification(targetId);
+      } else {
+        result = upiValidator.manuallyConfirmChime(targetId);
+      }
+    } else if (action === "QUARANTINE_NEIGHBOR") {
+      result = upiValidator.manuallyQuarantineChime(targetId);
+    }
+
+    if (result) {
+      broadcast({
+        type: "UPI_VERIFICATION_RESOLVED",
+        targetId,
+        action,
+        decision: result
+      });
+    }
+
+    res.json({
+      ok: true,
+      actionTaken: action,
+      decision: result,
+      addedToTally: result?.status === "CONFIRMED_STALL_SALE"
+    });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 vendorRouter.post('/upi/event', (req, res) => {
   try {
     const { eventType, amount, timestamp, appName, rrn, rawText, confidence } = req.body;

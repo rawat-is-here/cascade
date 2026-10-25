@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -17,15 +18,26 @@ interface Props {
   onUpiPaymentConfirmed?: (amount: number, isSale: boolean) => void;
 }
 
-interface UpiFeedItem {
+export interface VerificationItem {
   id: string;
-  type: 'CONFIRMED_SALE' | 'PERSONAL_TRANSFER' | 'NEIGHBOR_CHIME';
+  type: 'SOUNDBOX_CHIME' | 'SMS_NOTIFICATION';
+  appName: string;
+  amount: number;
+  time: string;
+  timestamp: number;
+  refId?: string;
+  isPotentialNeighbor: boolean;
+}
+
+export interface ResolvedHistoryItem {
+  id: string;
+  type: 'DUAL_FUSION' | 'MANUAL_VERIFIED' | 'NEIGHBOR_QUARANTINED' | 'PERSONAL_EQUITY';
   title: string;
   subtitle: string;
   amount: number;
-  badgeText: string;
   time: string;
-  status: 'CONFIRMED' | 'ISOLATED' | 'QUARANTINED';
+  badgeText: string;
+  status: 'CONFIRMED' | 'QUARANTINED' | 'ISOLATED';
 }
 
 export const UpiEventsModal: React.FC<Props> = ({
@@ -35,160 +47,281 @@ export const UpiEventsModal: React.FC<Props> = ({
   onUpiPaymentConfirmed
 }) => {
   const [loading, setLoading] = useState(false);
-  const [simulatingKind, setSimulatingKind] = useState<'PAYTM' | 'PHONEPE' | 'SOUNDBOX' | null>(null);
-  const [feed, setFeed] = useState<UpiFeedItem[]>([]);
-  const [statusNotice, setStatusNotice] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'VERIFICATION' | 'HISTORY'>('VERIFICATION');
+  const [simulating, setSimulating] = useState<string | null>(null);
 
-  // Fetch recent UPI events when modal opens
+  // Verification stage queues
+  const [pendingQueue, setPendingQueue] = useState<VerificationItem[]>([]);
+  const [history, setHistory] = useState<ResolvedHistoryItem[]>([
+    {
+      id: 'hist-init-1',
+      type: 'DUAL_FUSION',
+      title: 'Paytm Soundbox + Bank SMS Matched',
+      subtitle: 'Audio chime matched status-bar SMS within 4.2s • Added to sales tally',
+      amount: 40,
+      time: '11:15 AM',
+      badgeText: 'Dual Fusion Verified',
+      status: 'CONFIRMED'
+    },
+    {
+      id: 'hist-init-2',
+      type: 'NEIGHBOR_QUARANTINED',
+      title: 'Side Stall Soundbox Noise Ignored',
+      subtitle: 'Chime heard with zero matching bank SMS • Protected from false sales tally',
+      amount: 100,
+      time: '11:42 AM',
+      badgeText: 'Neighbor Chime Quarantined (₹0)',
+      status: 'QUARANTINED'
+    }
+  ]);
+
+  const [statusBanner, setStatusBanner] = useState<string | null>(null);
+
+  // Fetch live verification queue when modal opens
   useEffect(() => {
     if (!visible) return;
-    const fetchState = async () => {
-      try {
-        const res = await fetch(`${apiBaseUrl}/vendor/state`);
-        const data = await res.json();
-        // Extract upi events from state if available
-        const events: UpiFeedItem[] = [];
-        if (data && data.upiEvents && Array.isArray(data.upiEvents)) {
-          data.upiEvents.forEach((e: any, idx: number) => {
-            const status: UpiFeedItem['status'] =
-              e.decision?.status === 'CONFIRMED' ? 'CONFIRMED' :
-              e.decision?.status === 'ISOLATED' ? 'ISOLATED' : 'QUARANTINED';
-            events.push({
-              id: e.id || `upi-fetched-${idx}`,
-              type: status === 'CONFIRMED' ? 'CONFIRMED_SALE' : status === 'ISOLATED' ? 'PERSONAL_TRANSFER' : 'NEIGHBOR_CHIME',
-              title: e.title || e.appName || 'UPI Event',
-              subtitle: e.subtitle || e.rawText || '',
-              amount: e.amount || 0,
-              badgeText: status === 'CONFIRMED' ? 'Confirmed Shop Sale' : status === 'ISOLATED' ? 'Personal Money (Equity)' : 'Neighbor Chime Ignored',
-              time: e.time || 'Today',
-              status
-            });
-          });
-        }
-        setFeed(events);
-      } catch {
-        // Start with empty feed if API unavailable
-        setFeed([]);
-      }
-    };
-    fetchState();
+    fetchVerificationQueue();
   }, [visible]);
 
-  const handleSimulatePaytm = async () => {
-    setSimulatingKind('PAYTM');
-    setLoading(true);
+  const fetchVerificationQueue = async () => {
     try {
-      const res = await fetch(`${apiBaseUrl}/vendor/upi/event`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventType: 'SMS_NOTIFICATION',
-          amount: 30,
-          appName: 'PAYTM',
-          rawText: 'Rs. 30 received from Customer via Paytm'
-        })
-      });
+      const res = await fetch(`${apiBaseUrl}/vendor/upi/verification-queue`);
       const data = await res.json();
-      const serverStatus: UpiFeedItem['status'] =
-        data?.decision?.status === 'CONFIRMED' ? 'CONFIRMED' :
-        data?.decision?.status === 'ISOLATED' ? 'ISOLATED' : 'CONFIRMED';
-      const newItem: UpiFeedItem = {
-        id: `upi-live-${Date.now()}`,
-        type: 'CONFIRMED_SALE',
-        title: 'Paytm SMS (+₹30)',
-        subtitle: 'Rs. 30 received from Customer via Paytm',
-        amount: 30,
-        badgeText: 'Confirmed Shop Sale',
-        time: 'Just now',
-        status: serverStatus
-      };
-      setFeed(prev => [newItem, ...prev]);
-      if (serverStatus === 'CONFIRMED' && onUpiPaymentConfirmed) onUpiPaymentConfirmed(30, true);
-      setStatusNotice('✓ Paytm ₹30 event processed by server.');
+      if (data.ok) {
+        const items: VerificationItem[] = [];
+
+        // Format pending chimes
+        (data.pendingChimes || []).forEach((c: any) => {
+          items.push({
+            id: c.chimeId,
+            type: 'SOUNDBOX_CHIME',
+            appName: c.sourceApp || 'PAYTM',
+            amount: c.amount,
+            time: new Date(c.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+            timestamp: c.timestamp,
+            isPotentialNeighbor: true
+          });
+        });
+
+        // Format pending notifications
+        (data.pendingNotifications || []).forEach((n: any) => {
+          items.push({
+            id: n.refId || n.notificationId,
+            type: 'SMS_NOTIFICATION',
+            appName: n.sourceApp || 'PAYTM',
+            amount: n.amount,
+            time: new Date(n.receivedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+            timestamp: n.receivedAt,
+            refId: n.refId,
+            isPotentialNeighbor: false
+          });
+        });
+
+        setPendingQueue(items);
+      }
     } catch {
-      setStatusNotice('⚠ Could not reach server for Paytm event.');
-    } finally {
-      setLoading(false);
-      setSimulatingKind(null);
+      // Retain existing local state
     }
   };
 
-  const handleSimulatePhonePe = async () => {
-    setSimulatingKind('PHONEPE');
+  // 1. Simulate Acoustic Soundbox Chime (Enters Verification Stage - NOT added to tally yet)
+  const handleSimulateChime = async (amount = 50) => {
+    setSimulating('CHIME');
     setLoading(true);
-    try {
-      const res = await fetch(`${apiBaseUrl}/vendor/upi/event`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventType: 'SMS_NOTIFICATION',
-          amount: 50,
-          appName: 'PHONEPE',
-          rawText: 'Rs. 50 credited via PhonePe'
-        })
-      });
-      const data = await res.json();
-      const serverStatus: UpiFeedItem['status'] =
-        data?.decision?.status === 'CONFIRMED' ? 'CONFIRMED' :
-        data?.decision?.status === 'ISOLATED' ? 'ISOLATED' : 'CONFIRMED';
-      const newItem: UpiFeedItem = {
-        id: `upi-live-${Date.now()}`,
-        type: 'CONFIRMED_SALE',
-        title: 'PhonePe SMS (+₹50)',
-        subtitle: 'Rs. 50 credited via PhonePe',
-        amount: 50,
-        badgeText: 'Confirmed Shop Sale',
-        time: 'Just now',
-        status: serverStatus
-      };
-      setFeed(prev => [newItem, ...prev]);
-      if (serverStatus === 'CONFIRMED' && onUpiPaymentConfirmed) onUpiPaymentConfirmed(50, true);
-      setStatusNotice('✓ PhonePe ₹50 event processed by server.');
-    } catch {
-      setStatusNotice('⚠ Could not reach server for PhonePe event.');
-    } finally {
-      setLoading(false);
-      setSimulatingKind(null);
-    }
-  };
+    setStatusBanner(null);
 
-  const handleSimulateSoundbox = async () => {
-    setSimulatingKind('SOUNDBOX');
-    setLoading(true);
     try {
       const res = await fetch(`${apiBaseUrl}/vendor/upi/event`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventType: 'SOUNDBOX_CHIME',
-          amount: 80,
+          amount,
           appName: 'PAYTM',
-          confidence: 0.96
+          confidence: 0.95,
+          timestamp: Date.now()
         })
       });
       const data = await res.json();
-      const serverStatus: UpiFeedItem['status'] =
-        data?.decision?.status === 'CONFIRMED' ? 'CONFIRMED' :
-        data?.decision?.status === 'ISOLATED' ? 'ISOLATED' :
-        data?.decision?.status === 'QUARANTINED' ? 'QUARANTINED' : 'CONFIRMED';
-      const newItem: UpiFeedItem = {
-        id: `upi-live-${Date.now()}`,
-        type: serverStatus === 'QUARANTINED' ? 'NEIGHBOR_CHIME' : 'CONFIRMED_SALE',
-        title: 'Paytm Soundbox Chime (+₹80)',
-        subtitle: 'Soundbox chime detected with high confidence',
-        amount: 80,
-        badgeText: serverStatus === 'QUARANTINED' ? 'Neighbor Chime Ignored' : 'Confirmed Shop Sale',
-        time: 'Just now',
-        status: serverStatus
-      };
-      setFeed(prev => [newItem, ...prev]);
-      if (serverStatus === 'CONFIRMED' && onUpiPaymentConfirmed) onUpiPaymentConfirmed(80, true);
-      setStatusNotice(`✓ Soundbox ₹80 event processed (${serverStatus}).`);
+
+      if (data.isDualConfirmed) {
+        // Matched an existing SMS in buffer
+        const hist: ResolvedHistoryItem = {
+          id: `dual-${Date.now()}`,
+          type: 'DUAL_FUSION',
+          title: `Paytm Soundbox + SMS Matched (+₹${amount})`,
+          subtitle: 'Dual acoustic chime + bank SMS mutually verified • Credited to sales',
+          amount,
+          time: 'Just now',
+          badgeText: 'Dual Fusion Verified',
+          status: 'CONFIRMED'
+        };
+        setHistory(prev => [hist, ...prev]);
+        if (onUpiPaymentConfirmed) onUpiPaymentConfirmed(amount, true);
+        setStatusBanner(`✓ Soundbox chime matched with existing Bank SMS! Added ₹${amount} to sales.`);
+        await fetchVerificationQueue();
+      } else {
+        // Enters Verification Queue
+        const newPending: VerificationItem = {
+          id: `CHIME_${Date.now()}`,
+          type: 'SOUNDBOX_CHIME',
+          appName: 'PAYTM',
+          amount,
+          time: 'Just now',
+          timestamp: Date.now(),
+          isPotentialNeighbor: true
+        };
+        setPendingQueue(prev => [newPending, ...prev]);
+        setStatusBanner(`⚠️ Chime heard (+₹${amount}) — Holding in Verification Stage. Waiting for matching bank SMS.`);
+      }
     } catch {
-      setStatusNotice('⚠ Could not reach server for Soundbox event.');
+      setStatusBanner('⚠ Could not contact server for chime processing.');
     } finally {
       setLoading(false);
-      setSimulatingKind(null);
+      setSimulating(null);
+    }
+  };
+
+  // 2. Simulate Matching Bank SMS Notification (Triggers Fusion or Enters Queue)
+  const handleSimulateSms = async (amount = 50) => {
+    setSimulating('SMS');
+    setLoading(true);
+    setStatusBanner(null);
+
+    const rrn = `PAYTM${amount}${Date.now().toString().slice(-4)}`;
+
+    try {
+      const res = await fetch(`${apiBaseUrl}/vendor/upi/event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'SMS_NOTIFICATION',
+          amount,
+          appName: 'PAYTM',
+          rrn,
+          timestamp: Date.now()
+        })
+      });
+      const data = await res.json();
+
+      if (data.isDualConfirmed) {
+        // FUSED! Chime + SMS matched
+        const hist: ResolvedHistoryItem = {
+          id: `dual-${Date.now()}`,
+          type: 'DUAL_FUSION',
+          title: `Paytm Soundbox + SMS Matched (+₹${amount})`,
+          subtitle: `Bank alert matched audio chime • Verified with RRN: ${rrn}`,
+          amount,
+          time: 'Just now',
+          badgeText: 'Dual Fusion Verified',
+          status: 'CONFIRMED'
+        };
+        setHistory(prev => [hist, ...prev]);
+        setPendingQueue(prev => prev.filter(p => !(p.type === 'SOUNDBOX_CHIME' && Math.abs(p.amount - amount) < 0.01)));
+        if (onUpiPaymentConfirmed) onUpiPaymentConfirmed(amount, true);
+        setStatusBanner(`✓ DUAL STREAM FUSION! Bank SMS verified Soundbox chime. ₹${amount} credited to register.`);
+      } else {
+        // Silent notification
+        const newPending: VerificationItem = {
+          id: rrn,
+          type: 'SMS_NOTIFICATION',
+          appName: 'PAYTM',
+          amount,
+          time: 'Just now',
+          timestamp: Date.now(),
+          refId: rrn,
+          isPotentialNeighbor: false
+        };
+        setPendingQueue(prev => [newPending, ...prev]);
+        setStatusBanner(`📱 Bank SMS alert received (+₹${amount}) — Holding in verification stage.`);
+      }
+    } catch {
+      setStatusBanner('⚠ Could not contact server for SMS event.');
+    } finally {
+      setLoading(false);
+      setSimulating(null);
+    }
+  };
+
+  // 3. Vendor Manually Confirms: "This was my stall's sale!"
+  const handleConfirmMySale = async (item: VerificationItem) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${apiBaseUrl}/vendor/upi/verify-action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetId: item.id,
+          action: 'CONFIRM_MY_SALE',
+          targetType: item.type === 'SOUNDBOX_CHIME' ? 'CHIME' : 'NOTIFICATION'
+        })
+      });
+      const data = await res.json();
+
+      // Remove from pending
+      setPendingQueue(prev => prev.filter(p => p.id !== item.id));
+
+      // Add to history
+      const hist: ResolvedHistoryItem = {
+        id: `manual-${Date.now()}`,
+        type: 'MANUAL_VERIFIED',
+        title: `${item.appName} Sale Manually Verified (+₹${item.amount})`,
+        subtitle: 'Vendor confirmed payment authenticity • Credited to sales register',
+        amount: item.amount,
+        time: 'Just now',
+        badgeText: 'Vendor Verified',
+        status: 'CONFIRMED'
+      };
+      setHistory(prev => [hist, ...prev]);
+
+      // Add to main App transactions tally
+      if (onUpiPaymentConfirmed) {
+        onUpiPaymentConfirmed(item.amount, true);
+      }
+
+      setStatusBanner(`✓ Confirmed! Added ₹${item.amount} to today's sales tally.`);
+    } catch {
+      setStatusBanner('⚠ Error confirming sale. Check server connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 4. Vendor Discards: "Neighbor stall's soundbox noise!"
+  const handleQuarantineNeighbor = async (item: VerificationItem) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${apiBaseUrl}/vendor/upi/verify-action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetId: item.id,
+          action: 'QUARANTINE_NEIGHBOR',
+          targetType: 'CHIME'
+        })
+      });
+
+      // Remove from pending
+      setPendingQueue(prev => prev.filter(p => p.id !== item.id));
+
+      // Add to quarantined history with 0 added to tally
+      const hist: ResolvedHistoryItem = {
+        id: `quar-${Date.now()}`,
+        type: 'NEIGHBOR_QUARANTINED',
+        title: `Side Stall Soundbox Quarantined (₹${item.amount})`,
+        subtitle: 'Identified as neighboring stall noise • ₹0 added to drawer tally',
+        amount: item.amount,
+        time: 'Just now',
+        badgeText: 'Neighbor Quarantined (₹0)',
+        status: 'QUARANTINED'
+      };
+      setHistory(prev => [hist, ...prev]);
+
+      setStatusBanner(`🛡️ Neighbor soundbox discarded! ₹0 added to your register.`);
+    } catch {
+      setStatusBanner('⚠ Error quarantining chime.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -201,11 +334,11 @@ export const UpiEventsModal: React.FC<Props> = ({
             <View style={styles.header}>
               <View style={styles.titleGroup}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="phone-portrait-outline" size={20} color="#073B3A" />
+                  <Ionicons name="shield-checkmark" size={20} color="#073B3A" />
                 </View>
                 <View>
-                  <Text style={styles.title}>Online Payments</Text>
-                  <Text style={styles.subtitle}>Soundbox & QR Cross-Validation</Text>
+                  <Text style={styles.title}>Soundbox & SMS Verification</Text>
+                  <Text style={styles.subtitle}>Dual-Stream Cross-Check: Eliminates Neighbor Collisions</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -213,110 +346,193 @@ export const UpiEventsModal: React.FC<Props> = ({
               </TouchableOpacity>
             </View>
 
-            {/* Explanation Note */}
-            <View style={styles.infoCard}>
-              <Text style={styles.infoTitle}>How it works for your stall:</Text>
-              <Text style={styles.infoBody}>
-                When a customer scans your QR, it matches the soundbox chime and adds to sales. If family sends money for home, the app automatically isolates it so your shop accounts stay 100% clean.
+            {/* Explainable Protective Banner */}
+            <View style={styles.infoBanner}>
+              <Ionicons name="information-circle" size={18} color="#073B3A" style={{ marginRight: 8, marginTop: 1 }} />
+              <Text style={styles.infoBannerText}>
+                In dense market rows, nearby stalls' soundboxes can trigger false sales. Cascade cross-references the mic audio chime against your phone's bank SMS alerts. Only verified payments enter your register.
               </Text>
             </View>
 
-            {/* Test Simulation Controls */}
-            <Text style={styles.sectionHeading}>Simulate Live Events</Text>
-            <View style={styles.simRow}>
+            {/* Interactive Scenario Testers */}
+            <Text style={styles.sectionHeading}>TEST DUAL-STREAM SCENARIOS</Text>
+            <View style={styles.simGrid}>
               <TouchableOpacity
-                style={[styles.simButton, { backgroundColor: '#F1FFE5', borderColor: '#79AF00' }]}
-                onPress={handleSimulatePaytm}
+                style={[styles.simCard, simulating === 'CHIME' && styles.simCardActive]}
+                onPress={() => handleSimulateChime(50)}
                 disabled={loading}
               >
-                {simulatingKind === 'PAYTM' ? (
-                  <ActivityIndicator size="small" color="#073B3A" style={{ marginRight: 4 }} />
-                ) : (
-                  <Ionicons name="checkmark-circle" size={16} color="#073B3A" style={{ marginRight: 4 }} />
-                )}
-                <Text style={styles.simButtonText}>Paytm ₹30</Text>
+                <Ionicons name="volume-high-outline" size={18} color="#073B3A" />
+                <Text style={styles.simCardTitle}>1. Hear Soundbox</Text>
+                <Text style={styles.simCardSub}>₹50 Chime Only</Text>
+                <View style={styles.simBadgeWarn}>
+                  <Text style={styles.simBadgeWarnText}>Hold in Verify</Text>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.simButton, { backgroundColor: '#EFF6FF', borderColor: '#3B82F6' }]}
-                onPress={handleSimulatePhonePe}
+                style={[styles.simCard, simulating === 'SMS' && styles.simCardActive]}
+                onPress={() => handleSimulateSms(50)}
                 disabled={loading}
               >
-                {simulatingKind === 'PHONEPE' ? (
-                  <ActivityIndicator size="small" color="#1D4ED8" style={{ marginRight: 4 }} />
-                ) : (
-                  <Ionicons name="people" size={16} color="#1D4ED8" style={{ marginRight: 4 }} />
-                )}
-                <Text style={[styles.simButtonText, { color: '#1D4ED8' }]}>PhonePe ₹50</Text>
+                <Ionicons name="chatbox-ellipses-outline" size={18} color="#073B3A" />
+                <Text style={styles.simCardTitle}>2. Bank SMS Alert</Text>
+                <Text style={styles.simCardSub}>₹50 Matching SMS</Text>
+                <View style={styles.simBadgeSuccess}>
+                  <Text style={styles.simBadgeSuccessText}>Auto-Fuse</Text>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.simButton, { backgroundColor: '#F3F4F6', borderColor: '#9CA3AF' }]}
-                onPress={handleSimulateSoundbox}
+                style={styles.simCard}
+                onPress={() => handleSimulateChime(120)}
                 disabled={loading}
               >
-                {simulatingKind === 'SOUNDBOX' ? (
-                  <ActivityIndicator size="small" color="#4B5563" style={{ marginRight: 4 }} />
-                ) : (
-                  <Ionicons name="volume-mute" size={16} color="#4B5563" style={{ marginRight: 4 }} />
-                )}
-                <Text style={[styles.simButtonText, { color: '#4B5563' }]}>Soundbox ₹80</Text>
+                <Ionicons name="radio-outline" size={18} color="#DC2626" />
+                <Text style={styles.simCardTitle}>3. Neighbor Chime</Text>
+                <Text style={styles.simCardSub}>₹120 Side Stall</Text>
+                <View style={styles.simBadgeDanger}>
+                  <Text style={styles.simBadgeDangerText}>Spillover</Text>
+                </View>
               </TouchableOpacity>
             </View>
 
-            {statusNotice && (
-              <View style={styles.inlinePromptBanner}>
-                <Ionicons name="sparkles" size={14} color="#073B3A" style={{ marginRight: 6 }} />
-                <Text style={styles.inlinePromptText}>{statusNotice}</Text>
+            {/* Live Feedback Status Banner */}
+            {statusBanner && (
+              <View style={styles.liveNoticeCard}>
+                <Ionicons name="sparkles" size={16} color="#073B3A" style={{ marginRight: 6 }} />
+                <Text style={styles.liveNoticeText}>{statusBanner}</Text>
               </View>
             )}
 
-            {/* Activity Feed */}
-            <Text style={styles.sectionHeading}>Today's Online Events</Text>
-            {feed.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Ionicons name="receipt-outline" size={32} color="#D1D5DB" />
-                <Text style={styles.emptyStateText}>No UPI events yet today</Text>
-                <Text style={styles.emptyStateSub}>Tap a button above to simulate an event</Text>
-              </View>
-            ) : (
-              feed.map(item => (
-                <View key={item.id} style={styles.feedCard}>
-                  <View style={styles.feedTopRow}>
-                    <View style={[
-                      styles.statusBadge,
-                      item.status === 'CONFIRMED' && styles.badgeConfirmed,
-                      item.status === 'ISOLATED' && styles.badgeIsolated,
-                      item.status === 'QUARANTINED' && styles.badgeQuarantined
-                    ]}>
-                      <Text style={[
-                        styles.badgeLabel,
-                        item.status === 'CONFIRMED' && styles.badgeLabelConfirmed,
-                        item.status === 'ISOLATED' && styles.badgeLabelIsolated,
-                        item.status === 'QUARANTINED' && styles.badgeLabelQuarantined
-                      ]}>
-                        {item.badgeText}
-                      </Text>
-                    </View>
-                    <Text style={styles.feedTime}>{item.time}</Text>
-                  </View>
+            {/* Tab Navigation */}
+            <View style={styles.tabStrip}>
+              <TouchableOpacity
+                style={[styles.tabItem, activeTab === 'VERIFICATION' && styles.tabItemActive]}
+                onPress={() => setActiveTab('VERIFICATION')}
+              >
+                <Text style={[styles.tabText, activeTab === 'VERIFICATION' && styles.tabTextActive]}>
+                  Pending Verification ({pendingQueue.length})
+                </Text>
+              </TouchableOpacity>
 
-                  <View style={styles.feedMainRow}>
-                    <View style={{ flex: 1, marginRight: 10 }}>
-                      <Text style={styles.feedTitle}>{item.title}</Text>
-                      <Text style={styles.feedSub}>{item.subtitle}</Text>
-                    </View>
-                    <Text style={[
-                      styles.feedAmount,
-                      item.status === 'CONFIRMED' && styles.amountConfirmed,
-                      item.status === 'ISOLATED' && styles.amountIsolated,
-                      item.status === 'QUARANTINED' && styles.amountQuarantined
-                    ]}>
-                      {item.status === 'QUARANTINED' ? 'Ignored' : `+₹${item.amount.toLocaleString('en-IN')}`}
+              <TouchableOpacity
+                style={[styles.tabItem, activeTab === 'HISTORY' && styles.tabItemActive]}
+                onPress={() => setActiveTab('HISTORY')}
+              >
+                <Text style={[styles.tabText, activeTab === 'HISTORY' && styles.tabTextActive]}>
+                  Verified Ledger ({history.length})
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* SECTION 1: PENDING VERIFICATION STAGE */}
+            {activeTab === 'VERIFICATION' && (
+              <View style={styles.verificationSection}>
+                {pendingQueue.length === 0 ? (
+                  <View style={styles.emptyVerificationBox}>
+                    <Ionicons name="checkmark-done-circle-outline" size={44} color="#79AF00" />
+                    <Text style={styles.emptyVerificationTitle}>All Inflows Verified</Text>
+                    <Text style={styles.emptyVerificationSub}>
+                      No pending soundbox chimes or unverified alerts. Your sales tally is clean and protected from neighbor noise.
                     </Text>
                   </View>
-                </View>
-              ))
+                ) : (
+                  pendingQueue.map((item) => (
+                    <View key={item.id} style={styles.pendingCard}>
+                      {/* Warning Header */}
+                      <View style={styles.pendingWarnHeader}>
+                        <View style={styles.warnPill}>
+                          <Ionicons name="warning-outline" size={12} color="#9A3412" style={{ marginRight: 4 }} />
+                          <Text style={styles.warnPillText}>
+                            {item.type === 'SOUNDBOX_CHIME' ? 'UNMATCHED SOUNDBOX AUDIO' : 'BANK SMS (NO CHIME)'}
+                          </Text>
+                        </View>
+                        <Text style={styles.pendingTime}>{item.time}</Text>
+                      </View>
+
+                      {/* Item Details */}
+                      <View style={styles.pendingMainRow}>
+                        <View style={{ flex: 1, marginRight: 10 }}>
+                          <Text style={styles.pendingTitle}>
+                            {item.type === 'SOUNDBOX_CHIME' ? 'Microphone Heard Soundbox Chime' : 'Incoming Bank Notification'}
+                          </Text>
+                          <Text style={styles.pendingSub}>
+                            {item.isPotentialNeighbor
+                              ? 'Could be neighboring stall vendor soundbox. Confirm below to add to sales.'
+                              : 'Payment received without audio soundbox chime. Verify if customer paid.'}
+                          </Text>
+                        </View>
+                        <Text style={styles.pendingAmount}>₹{item.amount.toLocaleString('en-IN')}</Text>
+                      </View>
+
+                      {/* Verification Action Buttons */}
+                      <View style={styles.actionRow}>
+                        <TouchableOpacity
+                          style={styles.confirmSaleBtn}
+                          onPress={() => handleConfirmMySale(item)}
+                          disabled={loading}
+                        >
+                          <Ionicons name="checkmark-circle" size={15} color="#073B3A" style={{ marginRight: 5 }} />
+                          <Text style={styles.confirmSaleText}>Confirm My Sale (+₹{item.amount})</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.quarantineBtn}
+                          onPress={() => handleQuarantineNeighbor(item)}
+                          disabled={loading}
+                        >
+                          <Ionicons name="close-circle-outline" size={14} color="#DC2626" style={{ marginRight: 4 }} />
+                          <Text style={styles.quarantineText}>Ignore (Neighbor's)</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </View>
+            )}
+
+            {/* SECTION 2: VERIFIED HISTORY */}
+            {activeTab === 'HISTORY' && (
+              <View style={styles.historySection}>
+                {history.map((item) => (
+                  <View key={item.id} style={styles.feedCard}>
+                    <View style={styles.feedTopRow}>
+                      <View style={[
+                        styles.statusBadge,
+                        item.status === 'CONFIRMED' && styles.badgeConfirmed,
+                        item.status === 'QUARANTINED' && styles.badgeQuarantined,
+                        item.status === 'ISOLATED' && styles.badgeIsolated
+                      ]}>
+                        <Text style={[
+                          styles.badgeLabel,
+                          item.status === 'CONFIRMED' && styles.badgeLabelConfirmed,
+                          item.status === 'QUARANTINED' && styles.badgeLabelQuarantined,
+                          item.status === 'ISOLATED' && styles.badgeLabelIsolated
+                        ]}>
+                          {item.badgeText}
+                        </Text>
+                      </View>
+                      <Text style={styles.feedTime}>{item.time}</Text>
+                    </View>
+
+                    <View style={styles.feedMainRow}>
+                      <View style={{ flex: 1, marginRight: 10 }}>
+                        <Text style={styles.feedTitle}>{item.title}</Text>
+                        <Text style={styles.feedSub}>{item.subtitle}</Text>
+                      </View>
+                      <Text style={[
+                        styles.feedAmount,
+                        item.status === 'CONFIRMED' && styles.amountConfirmed,
+                        item.status === 'QUARANTINED' && styles.amountQuarantined,
+                        item.status === 'ISOLATED' && styles.amountIsolated
+                      ]}>
+                        {item.status === 'QUARANTINED' ? '₹0 (Quarantined)' : `+₹${item.amount.toLocaleString('en-IN')}`}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
             )}
 
             <TouchableOpacity style={styles.closeFullBtn} onPress={onClose}>
@@ -339,172 +555,347 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    maxHeight: '90%',
+    maxHeight: '92%',
   },
   content: {
-    padding: 22,
+    padding: 20,
     paddingBottom: 36,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   titleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#F1FFE5',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: '#073B3A',
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
     marginTop: 2,
   },
   closeBtn: {
     padding: 6,
   },
-  infoCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 14,
+  infoBanner: {
+    flexDirection: 'row',
+    backgroundColor: '#F8FCF9',
+    borderRadius: 14,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 16,
+    borderColor: '#DDECE7',
+    marginBottom: 14,
   },
-  infoTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#073B3A',
-    marginBottom: 4,
-  },
-  infoBody: {
+  infoBannerText: {
+    flex: 1,
     fontSize: 11,
-    color: '#4B5563',
+    color: '#073B3A',
     lineHeight: 16,
     fontWeight: '500',
   },
   sectionHeading: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '800',
-    color: '#111827',
-    marginBottom: 10,
-    marginTop: 6,
+    color: '#6B7280',
+    letterSpacing: 0.6,
+    marginBottom: 8,
   },
-  simRow: {
+  simGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 18,
+    marginBottom: 12,
   },
-  simButton: {
+  simCard: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
+    backgroundColor: '#F9FAFB',
     borderRadius: 14,
-    marginHorizontal: 3,
     borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 10,
+    marginHorizontal: 3,
+    alignItems: 'center',
   },
-  simButtonText: {
+  simCardActive: {
+    borderColor: '#073B3A',
+    backgroundColor: '#F1FFE5',
+  },
+  simCardTitle: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#073B3A',
+    fontWeight: '800',
+    color: '#111827',
+    marginTop: 4,
   },
-  inlinePromptBanner: {
+  simCardSub: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginTop: 1,
+  },
+  simBadgeWarn: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginTop: 6,
+  },
+  simBadgeWarnText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#92400E',
+  },
+  simBadgeSuccess: {
+    backgroundColor: '#F1FFE5',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginTop: 6,
+  },
+  simBadgeSuccessText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#225200',
+  },
+  simBadgeDanger: {
+    backgroundColor: '#FEE2E2',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginTop: 6,
+  },
+  simBadgeDangerText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#991B1B',
+  },
+  liveNoticeCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F1FFE5',
+    borderWidth: 1,
+    borderColor: '#79AF00',
     borderRadius: 12,
     padding: 10,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#DDECE7',
+    marginBottom: 12,
   },
-  inlinePromptText: {
+  liveNoticeText: {
     flex: 1,
     fontSize: 11,
     color: '#073B3A',
-    fontWeight: '600',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-  },
-  emptyStateText: {
-    fontSize: 14,
     fontWeight: '700',
-    color: '#9CA3AF',
-    marginTop: 10,
+    lineHeight: 16,
   },
-  emptyStateSub: {
-    fontSize: 11,
-    color: '#D1D5DB',
-    marginTop: 4,
+  tabStrip: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 12,
   },
-  feedCard: {
+  tabItem: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  tabItemActive: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     elevation: 2,
   },
-  feedTopRow: {
+  tabText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  tabTextActive: {
+    color: '#073B3A',
+    fontWeight: '800',
+  },
+  verificationSection: {
+    marginBottom: 10,
+  },
+  emptyVerificationBox: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    backgroundColor: '#F8FCF9',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#DDECE7',
+    paddingHorizontal: 20,
+  },
+  emptyVerificationTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#073B3A',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  emptyVerificationSub: {
+    fontSize: 11,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  pendingCard: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#FCD34D',
+    padding: 14,
+    marginBottom: 10,
+  },
+  pendingWarnHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
+  warnPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  warnPillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#9A3412',
+    letterSpacing: 0.4,
+  },
+  pendingTime: {
+    fontSize: 10,
+    color: '#78716C',
+    fontWeight: '600',
+  },
+  pendingMainRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  pendingTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1C1917',
+    marginBottom: 2,
+  },
+  pendingSub: {
+    fontSize: 11,
+    color: '#78716C',
+    lineHeight: 15,
+  },
+  pendingAmount: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#073B3A',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  confirmSaleBtn: {
+    flex: 1.4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E2FD52',
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginRight: 6,
+    shadowColor: '#073B3A',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  confirmSaleText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#073B3A',
+  },
+  quarantineBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F87171',
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  quarantineText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  historySection: {
+    marginBottom: 10,
+  },
+  feedCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 8,
+  },
+  feedTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   statusBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 8,
   },
   badgeConfirmed: {
     backgroundColor: '#F1FFE5',
   },
+  badgeQuarantined: {
+    backgroundColor: '#FEE2E2',
+  },
   badgeIsolated: {
     backgroundColor: '#EFF6FF',
   },
-  badgeQuarantined: {
-    backgroundColor: '#F3F4F6',
-  },
   badgeLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
   },
   badgeLabelConfirmed: {
     color: '#225200',
   },
+  badgeLabelQuarantined: {
+    color: '#991B1B',
+  },
   badgeLabelIsolated: {
     color: '#1E40AF',
-  },
-  badgeLabelQuarantined: {
-    color: '#6B7280',
   },
   feedTime: {
     fontSize: 10,
     color: '#9CA3AF',
-    fontWeight: '600',
   },
   feedMainRow: {
     flexDirection: 'row',
@@ -512,38 +903,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   feedTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#111827',
-    marginBottom: 2,
   },
   feedSub: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#6B7280',
-    lineHeight: 15,
+    marginTop: 1,
   },
   feedAmount: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
   },
   amountConfirmed: {
     color: '#073B3A',
   },
-  amountIsolated: {
-    color: '#1D4ED8',
-  },
   amountQuarantined: {
     color: '#9CA3AF',
   },
+  amountIsolated: {
+    color: '#1D4ED8',
+  },
   closeFullBtn: {
     backgroundColor: '#F3F4F6',
-    borderRadius: 18,
-    paddingVertical: 14,
+    borderRadius: 16,
+    paddingVertical: 13,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 6,
   },
   closeFullBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#374151',
   },

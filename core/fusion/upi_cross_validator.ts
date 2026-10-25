@@ -217,4 +217,83 @@ export class UPICrossValidator {
       rationale: `Notification for ₹${notif.amount} arrived with zero stall acoustic chime. Booked to Owner Personal Capital.`
     };
   }
+  public getPendingQueue(): { chimes: SoundboxAcousticChime[]; notifications: ParsedUPINotification[] } {
+    return {
+      chimes: [...this.pendingChimes],
+      notifications: [...this.pendingNotifications]
+    };
+  }
+
+  public manuallyConfirmChime(chimeId: string): UPICrossValidationResult | null {
+    const idx = this.pendingChimes.findIndex(c => c.chimeId === chimeId);
+    if (idx === -1) return null;
+    const chime = this.pendingChimes.splice(idx, 1)[0];
+    const syntheticRef = `MANUAL-${chime.chimeId}`;
+    this.processedRRNs.add(syntheticRef);
+
+    let delta: BalancedDelta | undefined;
+    if (this.ledger) {
+      delta = this.ledger.postTransaction({
+        txId: `UPI_MANUAL_${Date.now()}`,
+        debitAccount: "Assets:Bank:UPI",
+        creditAccount: "Revenue:Sales",
+        amountMinor: Math.round(chime.amount * 100),
+        occurredAt: chime.timestamp,
+        memo: `Vendor manually verified soundbox chime as stall sale (₹${chime.amount})`,
+        epistemicState: "CONSERVED_CANONICAL"
+      });
+    }
+
+    return {
+      status: "CONFIRMED_STALL_SALE",
+      amount: chime.amount,
+      sourceChimeId: chime.chimeId,
+      accountingAction: "POST_DR_BANK_CR_REVENUE",
+      delta,
+      rationale: `Vendor verified that acoustic chime of ₹${chime.amount} was authentic stall sale.`
+    };
+  }
+
+  public manuallyQuarantineChime(chimeId: string): UPICrossValidationResult | null {
+    const idx = this.pendingChimes.findIndex(c => c.chimeId === chimeId);
+    if (idx === -1) return null;
+    const chime = this.pendingChimes.splice(idx, 1)[0];
+
+    return {
+      status: "NEIGHBOR_SOUNDBOX_SPILLOVER",
+      amount: chime.amount,
+      sourceChimeId: chime.chimeId,
+      accountingAction: "QUARANTINE_ZERO_LEDGER",
+      rationale: `Vendor marked chime of ₹${chime.amount} as neighboring vendor soundbox noise. Quarantined.`
+    };
+  }
+
+  public manuallyConfirmNotification(refId: string): UPICrossValidationResult | null {
+    const idx = this.pendingNotifications.findIndex(n => n.refId === refId);
+    if (idx === -1) return null;
+    const notif = this.pendingNotifications.splice(idx, 1)[0];
+    this.processedRRNs.add(notif.refId);
+
+    let delta: BalancedDelta | undefined;
+    if (this.ledger) {
+      delta = this.ledger.postTransaction({
+        txId: `UPI_SALE_${notif.refId}`,
+        debitAccount: "Assets:Bank:UPI",
+        creditAccount: "Revenue:Sales",
+        amountMinor: Math.round(notif.amount * 100),
+        occurredAt: notif.receivedAt,
+        memo: `Vendor verified silent QR notification as stall sale (RRN: ${notif.refId})`,
+        epistemicState: "CONSERVED_CANONICAL"
+      });
+    }
+
+    return {
+      status: "CONFIRMED_STALL_SALE",
+      amount: notif.amount,
+      upiRefId: notif.refId,
+      accountingAction: "POST_DR_BANK_CR_REVENUE",
+      delta,
+      rationale: `Vendor confirmed silent QR code payment of ₹${notif.amount} without soundbox chime.`
+    };
+  }
 }
