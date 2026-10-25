@@ -1,0 +1,5621 @@
+[
+  {
+    "dialogue_id": "DIAL_001",
+    "scenario": "VALUE_ORDER",
+    "target_item": "tea",
+    "customerId": "CUST_15",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "30 rupaye ka chai de do",
+        "act": "VALUE_ORDER",
+        "value": 30
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 30.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_002",
+    "scenario": "VALUE_ORDER",
+    "target_item": "tea",
+    "customerId": "CUST_06",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "100 rupaye ka chai de do",
+        "act": "VALUE_ORDER",
+        "value": 100
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 100.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_003",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tomato",
+    "customerId": "CUST_39",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamatar kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "kuch to kam karo, 35 theek hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 35
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 35,
+      "expectedDerivedCash": 17.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_004",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_01",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chaha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 5 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "dedh kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 7.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_005",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_07",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pyaz kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "roz to aate hain, 30 karo na",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 30,
+      "expectedDerivedCash": 30.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_006",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_30",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pyaz kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 20 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 20
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 20,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_007",
+    "scenario": "WALKAWAY",
+    "target_item": "tomato",
+    "customerId": "CUST_37",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamaatar kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "25 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 25
+      },
+      {
+        "role": "VENDOR",
+        "text": "kharid hi utne ki hai",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "rehne do bhaiya bohot mehenga hai",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_008",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "tomato",
+    "customerId": "CUST_07",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo tamatar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 40,
+      "expectedDerivedCash": 40.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_009",
+    "scenario": "WALKAWAY",
+    "target_item": "poha",
+    "customerId": "CUST_11",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "10 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "nahi jam raha",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi chahiye",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_010",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "potato",
+    "customerId": "CUST_39",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo aloo do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 25.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_011",
+    "scenario": "VALUE_ORDER",
+    "target_item": "tea",
+    "customerId": "CUST_30",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "100 rupaye ka chai de do",
+        "act": "VALUE_ORDER",
+        "value": 100
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 100.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_012",
+    "scenario": "WALKAWAY",
+    "target_item": "onion",
+    "customerId": "CUST_04",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "kanda kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "20 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 20
+      },
+      {
+        "role": "VENDOR",
+        "text": "kharid hi utne ki hai",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "rehne do bhaiya bohot mehenga hai",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_013",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_21",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pyaz kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 25 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 25
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 50.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_014",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_36",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 15 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 15
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai le lo",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "3 samosa kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 3.0,
+        "unit": "piece"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 15,
+      "expectedDerivedCash": 45.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_015",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "samosa",
+    "customerId": "CUST_09",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "samose kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "15 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 15
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "roz to aate hain, 5 karo na",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "3 samosa kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 3.0,
+        "unit": "piece"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_016",
+    "scenario": "WALKAWAY",
+    "target_item": "tomato",
+    "customerId": "CUST_39",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamatar kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "35 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 35
+      },
+      {
+        "role": "VENDOR",
+        "text": "nahi hoga bhaiya",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chhod do bhai",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_017",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_01",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 5 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo baandh diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 5.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_018",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_11",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "kanda kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 25 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 25
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai le lo",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 12.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_019",
+    "scenario": "VALUE_ORDER",
+    "target_item": "tea",
+    "customerId": "CUST_07",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "50 rupaye ka chaha de do",
+        "act": "VALUE_ORDER",
+        "value": 50
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 50.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_020",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_35",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chai kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 5 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo baandh diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "3 samosa kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 3.0,
+        "unit": "piece"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_021",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_20",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pyaz kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 30 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 30,
+      "expectedDerivedCash": 60.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_022",
+    "scenario": "VALUE_ORDER",
+    "target_item": "samosa",
+    "customerId": "CUST_35",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "30 rupaye ka samosa de do",
+        "act": "VALUE_ORDER",
+        "value": 30
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 15,
+      "expectedDerivedCash": 30.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_023",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "potato",
+    "customerId": "CUST_39",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aloo kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "10 me nipta do bhaiya",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo baandh diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 5.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_024",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_29",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chai kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "roz to aate hain, 5 karo na",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "3 samosa kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 3.0,
+        "unit": "piece"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_025",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "potato",
+    "customerId": "CUST_36",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aalu kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "kuch to kam karo, 20 theek hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 20
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 20,
+      "expectedDerivedCash": 40.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_026",
+    "scenario": "WALKAWAY",
+    "target_item": "tomato",
+    "customerId": "CUST_05",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamatar kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "25 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 25
+      },
+      {
+        "role": "VENDOR",
+        "text": "nahi hoga bhaiya",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi chahiye",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_027",
+    "scenario": "VALUE_ORDER",
+    "target_item": "tomato",
+    "customerId": "CUST_35",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "30 rupaye ka tamatar de do",
+        "act": "VALUE_ORDER",
+        "value": 30
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 40,
+      "expectedDerivedCash": 30.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_028",
+    "scenario": "VALUE_ORDER",
+    "target_item": "tea",
+    "customerId": "CUST_13",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "20 rupaye ka chaha de do",
+        "act": "VALUE_ORDER",
+        "value": 20
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_029",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tomato",
+    "customerId": "CUST_04",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamaatar kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 30 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 30,
+      "expectedDerivedCash": 30.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_030",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_35",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chaha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "5 me nipta do bhaiya",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek plate kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "plate"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 5.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_031",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "potato",
+    "customerId": "CUST_29",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aloo kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 15 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 15
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 15,
+      "expectedDerivedCash": 7.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_032",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "tea",
+    "customerId": "CUST_11",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek plate chai do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "plate"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_033",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_04",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "roz to aate hain, 10 karo na",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "dedh kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_034",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_32",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "10 me nipta do bhaiya",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo le jao",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "dedh kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_035",
+    "scenario": "VALUE_ORDER",
+    "target_item": "potato",
+    "customerId": "CUST_21",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "20 rupaye ka aalu de do",
+        "act": "VALUE_ORDER",
+        "value": 20
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_036",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "tomato",
+    "customerId": "CUST_11",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo tamaatar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 40,
+      "expectedDerivedCash": 40.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_037",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tomato",
+    "customerId": "CUST_16",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamatar kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 35 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 35
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo baandh diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 35,
+      "expectedDerivedCash": 17.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_038",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "potato",
+    "customerId": "CUST_37",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aalu kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 10 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo le jao",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 5.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_039",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "potato",
+    "customerId": "CUST_20",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aloo kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 20 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 20
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 20,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_040",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "tomato",
+    "customerId": "CUST_05",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo tamaatar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 40,
+      "expectedDerivedCash": 40.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_041",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "samosa",
+    "customerId": "CUST_05",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "samosa kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "15 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 15
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 5 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo le jao",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_042",
+    "scenario": "VALUE_ORDER",
+    "target_item": "potato",
+    "customerId": "CUST_34",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "20 rupaye ka aloo de do",
+        "act": "VALUE_ORDER",
+        "value": 20
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_043",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_17",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chaha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 5 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai le lo",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 5.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_044",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "samosa",
+    "customerId": "CUST_22",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "samosa kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "15 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 15
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 5 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai le lo",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_045",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_06",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "kanda kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 25 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 25
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 12.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_046",
+    "scenario": "WALKAWAY",
+    "target_item": "tomato",
+    "customerId": "CUST_11",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamaatar kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "35 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 35
+      },
+      {
+        "role": "VENDOR",
+        "text": "isse kam me nahi hoga",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chhod do bhai",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_047",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "samosa",
+    "customerId": "CUST_35",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "samosa kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "15 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 15
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 10 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo baandh diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 5.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_048",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "samosa",
+    "customerId": "CUST_24",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "samosa kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "15 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 15
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 5 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 2.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_049",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_27",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chai kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 5 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do chai kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "cup"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_050",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "potato",
+    "customerId": "CUST_12",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo aalu pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "thodi extra chatni daal do",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 25.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_051",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "onion",
+    "customerId": "CUST_18",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo pyaz pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "thoda dhaniya mirchi daal do na",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 35,
+      "expectedDerivedCash": 35.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_052",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "tea",
+    "customerId": "CUST_15",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo chai pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "thoda dhaniya mirchi daal do na",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_053",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "poha",
+    "customerId": "CUST_15",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo pohe pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "thoda dhaniya mirchi daal do na",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 20,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_054",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_18",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chai kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 5 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo baandh diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "2 paav kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 2.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_055",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_12",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 15 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 15
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do chai kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "cup"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 15,
+      "expectedDerivedCash": 30.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_056",
+    "scenario": "VALUE_ORDER",
+    "target_item": "tomato",
+    "customerId": "CUST_28",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "20 rupaye ka tamaatar de do",
+        "act": "VALUE_ORDER",
+        "value": 20
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 40,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_057",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_01",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "poha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "kuch to kam karo, 10 theek hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai le lo",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "3 samosa kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 3.0,
+        "unit": "piece"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 30.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_058",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_40",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chai kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 5 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "2 paav kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 2.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_059",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_21",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chaha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 5 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo le jao",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do plate kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "plate"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_060",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "samosa",
+    "customerId": "CUST_12",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "samosa kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "15 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 15
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "kuch to kam karo, 10 theek hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo le jao",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do chai kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "cup"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_061",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_38",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "poha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 10 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo le jao",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do chai kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "cup"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_062",
+    "scenario": "VALUE_ORDER",
+    "target_item": "poha",
+    "customerId": "CUST_31",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "30 rupaye ka pohe de do",
+        "act": "VALUE_ORDER",
+        "value": 30
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 20,
+      "expectedDerivedCash": 30.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_063",
+    "scenario": "WALKAWAY",
+    "target_item": "tea",
+    "customerId": "CUST_22",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chai kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "5 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "nahi hoga bhaiya",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aage se le lenge",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_064",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "tea",
+    "customerId": "CUST_02",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo chaha pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "thoda dhaniya mirchi daal do na",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_065",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "potato",
+    "customerId": "CUST_30",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo aloo pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek nimbu upar se daal do",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 25.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_066",
+    "scenario": "VALUE_ORDER",
+    "target_item": "tea",
+    "customerId": "CUST_26",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "30 rupaye ka chai de do",
+        "act": "VALUE_ORDER",
+        "value": 30
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 30.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_067",
+    "scenario": "VALUE_ORDER",
+    "target_item": "potato",
+    "customerId": "CUST_12",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "100 rupaye ka aalu de do",
+        "act": "VALUE_ORDER",
+        "value": 100
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 100.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_068",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tomato",
+    "customerId": "CUST_34",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamatar kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "kuch to kam karo, 35 theek hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 35
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo le jao",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 35,
+      "expectedDerivedCash": 17.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_069",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_31",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 5 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek plate kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "plate"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 5.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_070",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_18",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chaha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 5 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai le lo",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek plate kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "plate"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 5.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_071",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_06",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pyaaz kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "25 me nipta do bhaiya",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 25
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "dedh kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 37.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_072",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_27",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "poha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "kuch to kam karo, 5 theek hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "2 paav kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 2.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_073",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "poha",
+    "customerId": "CUST_38",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo poha pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "thodi extra chatni daal do",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 20,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_074",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tomato",
+    "customerId": "CUST_20",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamaatar kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "roz to aate hain, 30 karo na",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo baandh diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 30,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_075",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_32",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chai kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "roz to aate hain, 5 karo na",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo le jao",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 2.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_076",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_09",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chaha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "kuch to kam karo, 5 theek hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do chai kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "cup"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_077",
+    "scenario": "WALKAWAY",
+    "target_item": "poha",
+    "customerId": "CUST_30",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "poha kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "15 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 15
+      },
+      {
+        "role": "VENDOR",
+        "text": "kharid hi utne ki hai",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "rehne do bhaiya bohot mehenga hai",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_078",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_22",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pyaz kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 25 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 25
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 12.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_079",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_04",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pyaaz kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "25 me nipta do bhaiya",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 25
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai le lo",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "2 paav kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 12.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_080",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "tomato",
+    "customerId": "CUST_02",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo tamatar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 40,
+      "expectedDerivedCash": 40.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_081",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "samosa",
+    "customerId": "CUST_37",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "samosa kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "15 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 15
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "roz to aate hain, 10 karo na",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai le lo",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_082",
+    "scenario": "WALKAWAY",
+    "target_item": "onion",
+    "customerId": "CUST_11",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pyaz kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "30 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "nahi jam raha",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "rehne do bhaiya bohot mehenga hai",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_083",
+    "scenario": "WALKAWAY",
+    "target_item": "samosa",
+    "customerId": "CUST_26",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "samosa kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "15 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 15
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "5 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "kharid hi utne ki hai",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "rehne do bhaiya bohot mehenga hai",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_084",
+    "scenario": "VALUE_ORDER",
+    "target_item": "samosa",
+    "customerId": "CUST_39",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "20 rupaye ka samosa de do",
+        "act": "VALUE_ORDER",
+        "value": 20
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 15,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_085",
+    "scenario": "WALKAWAY",
+    "target_item": "samosa",
+    "customerId": "CUST_05",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "samosa kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "15 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 15
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "5 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "chhod do fir",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi chahiye",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_086",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tomato",
+    "customerId": "CUST_30",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamaatar kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "roz to aate hain, 30 karo na",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "dedh kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 30,
+      "expectedDerivedCash": 45.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_087",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "tea",
+    "customerId": "CUST_31",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo chaha pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek nimbu upar se daal do",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_088",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "poha",
+    "customerId": "CUST_18",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo pohe pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek nimbu upar se daal do",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 20,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_089",
+    "scenario": "WALKAWAY",
+    "target_item": "potato",
+    "customerId": "CUST_22",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aloo kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "10 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "nahi hoga bhaiya",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chhod do bhai",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_090",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_22",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pyaaz kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "kuch to kam karo, 25 theek hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 25
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai le lo",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek paav kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.25,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 6.25,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_091",
+    "scenario": "WALKAWAY",
+    "target_item": "onion",
+    "customerId": "CUST_06",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "kanda kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "30 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "kharid hi utne ki hai",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chhod do bhai",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_092",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_29",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "poha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 5 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo le jao",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 2.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_093",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "potato",
+    "customerId": "CUST_24",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aloo kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "kuch to kam karo, 10 theek hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo baandh diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 5.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_094",
+    "scenario": "WALKAWAY",
+    "target_item": "onion",
+    "customerId": "CUST_30",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pyaz kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "20 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 20
+      },
+      {
+        "role": "VENDOR",
+        "text": "nahi jam raha",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi chahiye",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_095",
+    "scenario": "VALUE_ORDER",
+    "target_item": "onion",
+    "customerId": "CUST_08",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "30 rupaye ka pyaaz de do",
+        "act": "VALUE_ORDER",
+        "value": 30
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 35,
+      "expectedDerivedCash": 30.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_096",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "potato",
+    "customerId": "CUST_34",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aalu kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 10 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 5.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_097",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "potato",
+    "customerId": "CUST_01",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aloo kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "20 me nipta do bhaiya",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 20
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo le jao",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 20,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_098",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tomato",
+    "customerId": "CUST_32",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamatar kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 25 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 25
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo baandh diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 25.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_099",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_04",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pyaz kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "roz to aate hain, 25 karo na",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 25
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek paav kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.25,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 6.25,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_100",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tomato",
+    "customerId": "CUST_10",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamaatar kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "kuch to kam karo, 30 theek hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo le jao",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "dedh kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 30,
+      "expectedDerivedCash": 45.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_101",
+    "scenario": "WALKAWAY",
+    "target_item": "tomato",
+    "customerId": "CUST_39",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamatar kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "35 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 35
+      },
+      {
+        "role": "VENDOR",
+        "text": "chhod do fir",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aage se le lenge",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_102",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "samosa",
+    "customerId": "CUST_38",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek plate samose do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "plate"
+      },
+      {
+        "role": "VENDOR",
+        "text": "15 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 15
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 15,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_103",
+    "scenario": "WALKAWAY",
+    "target_item": "poha",
+    "customerId": "CUST_07",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "5 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "kharid hi utne ki hai",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aage se le lenge",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_104",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_36",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "kanda kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "30 me nipta do bhaiya",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 30,
+      "expectedDerivedCash": 30.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_105",
+    "scenario": "WALKAWAY",
+    "target_item": "poha",
+    "customerId": "CUST_03",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "5 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "kharid hi utne ki hai",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi chahiye",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_106",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "tea",
+    "customerId": "CUST_15",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo chaha pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek nimbu upar se daal do",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_107",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_10",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chai kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "5 me nipta do bhaiya",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek paav kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.25,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 1.25,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_108",
+    "scenario": "WALKAWAY",
+    "target_item": "tomato",
+    "customerId": "CUST_19",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamatar kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "30 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "isse kam me nahi hoga",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "rehne do bhaiya bohot mehenga hai",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_109",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_33",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "roz to aate hain, 5 karo na",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "3 samosa kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 3.0,
+        "unit": "piece"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_110",
+    "scenario": "VALUE_ORDER",
+    "target_item": "tomato",
+    "customerId": "CUST_17",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "20 rupaye ka tamatar de do",
+        "act": "VALUE_ORDER",
+        "value": 20
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 40,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_111",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "tomato",
+    "customerId": "CUST_38",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo tamatar pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "thoda dhaniya mirchi daal do na",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 40,
+      "expectedDerivedCash": 40.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_112",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_31",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chaha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 5 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "3 samosa kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 3.0,
+        "unit": "piece"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_113",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_06",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pyaaz kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 20 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 20
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 20,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_114",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_22",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pyaz kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 20 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 20
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 20,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_115",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "onion",
+    "customerId": "CUST_03",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo kanda pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek nimbu upar se daal do",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 35,
+      "expectedDerivedCash": 35.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_116",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tomato",
+    "customerId": "CUST_33",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamaatar kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 30 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo baandh diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 30,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_117",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_40",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 15 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 15
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek plate kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "plate"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 15,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_118",
+    "scenario": "WALKAWAY",
+    "target_item": "tomato",
+    "customerId": "CUST_29",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamatar kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "30 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "isse kam me nahi hoga",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "rehne do bhaiya bohot mehenga hai",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_119",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tomato",
+    "customerId": "CUST_01",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamatar kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "roz to aate hain, 25 karo na",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 25
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 12.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_120",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "potato",
+    "customerId": "CUST_32",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo aalu do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 25.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_121",
+    "scenario": "VALUE_ORDER",
+    "target_item": "tea",
+    "customerId": "CUST_31",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "100 rupaye ka chaha de do",
+        "act": "VALUE_ORDER",
+        "value": 100
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 100.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_122",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "potato",
+    "customerId": "CUST_39",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aloo kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 10 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 5.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_123",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tomato",
+    "customerId": "CUST_18",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "tamaatar kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 30 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai le lo",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 30,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_124",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "onion",
+    "customerId": "CUST_10",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo kanda do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 35,
+      "expectedDerivedCash": 35.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_125",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_25",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 10 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek plate kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "plate"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_126",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_03",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chai kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 5 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "2 paav kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 2.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_127",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "tea",
+    "customerId": "CUST_32",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek plate chaha do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "plate"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_128",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "tomato",
+    "customerId": "CUST_07",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo tamatar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "VENDOR",
+        "text": "40 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 40
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 40,
+      "expectedDerivedCash": 40.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_129",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "poha",
+    "customerId": "CUST_10",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek plate poha do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "plate"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 20,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_130",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_22",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "poha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 15 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 15
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do chai kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "cup"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 15,
+      "expectedDerivedCash": 30.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_131",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "tea",
+    "customerId": "CUST_25",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo chai pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek nimbu upar se daal do",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_132",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_16",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chaha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "5 me nipta do bhaiya",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai le lo",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek paav kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.25,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 1.25,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_133",
+    "scenario": "VALUE_ORDER",
+    "target_item": "tomato",
+    "customerId": "CUST_29",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "30 rupaye ka tamaatar de do",
+        "act": "VALUE_ORDER",
+        "value": 30
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 40,
+      "expectedDerivedCash": 30.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_134",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_19",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chaha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "padosi to 5 me de raha hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "2 paav kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 2.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_135",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "potato",
+    "customerId": "CUST_11",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aalu kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 10 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo baandh diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "dedh kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_136",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "poha",
+    "customerId": "CUST_15",
+    "noiseDb": 65,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek plate poha do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "plate"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 20,
+      "expectedDerivedCash": 20.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_137",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "poha",
+    "customerId": "CUST_30",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 10 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo baandh diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek paav kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.25,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 2.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_138",
+    "scenario": "NO_BARGAIN_DIRECT",
+    "target_item": "potato",
+    "customerId": "CUST_20",
+    "noiseDb": 88,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "ek kilo aalu do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 rupaye ho gaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 25,
+      "expectedDerivedCash": 25.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_139",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_13",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chaha kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "roz to aate hain, 5 karo na",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do plate kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "plate"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_140",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "potato",
+    "customerId": "CUST_19",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aloo kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chalo 10 me de do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "de diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 5.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_141",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "onion",
+    "customerId": "CUST_39",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo pyaaz pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "thodi extra chatni daal do",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 35,
+      "expectedDerivedCash": 35.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_142",
+    "scenario": "WALKAWAY",
+    "target_item": "poha",
+    "customerId": "CUST_15",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "pohe kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "20 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 20
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "15 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 15
+      },
+      {
+        "role": "VENDOR",
+        "text": "kharid hi utne ki hai",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi chahiye",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_143",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "tea",
+    "customerId": "CUST_20",
+    "noiseDb": 50,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "chai kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "10 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 10
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 5 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "chalo baandh diya",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek plate kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "plate"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 5.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_144",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "onion",
+    "customerId": "CUST_21",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "kanda kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "35 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 35
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "30 me nipta do bhaiya",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 30
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "aadha kilo kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.5,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 30,
+      "expectedDerivedCash": 15.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_145",
+    "scenario": "WALKAWAY",
+    "target_item": "potato",
+    "customerId": "CUST_11",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aloo kya bhav hai",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 rupaye",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "10 me do",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "nahi jam raha",
+        "act": "VENDOR_REJECTION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "chhod do bhai",
+        "act": "WALK_AWAY"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": null,
+      "expectedDerivedCash": 0.0,
+      "isWalkaway": true,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_146",
+    "scenario": "FREEBIE_ATTACHED",
+    "target_item": "onion",
+    "customerId": "CUST_05",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "1 kilo kanda pack kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 1.0,
+        "unit": "kg"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "thoda dhaniya mirchi daal do na",
+        "act": "FREEBIE_REQUEST"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 35,
+      "expectedDerivedCash": 35.0,
+      "isWalkaway": false,
+      "isFreebie": true
+    }
+  },
+  {
+    "dialogue_id": "DIAL_147",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "potato",
+    "customerId": "CUST_01",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "aloo kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "25 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 25
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "kuch to kam karo, 10 theek hai",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 10
+      },
+      {
+        "role": "VENDOR",
+        "text": "ok",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "ek paav kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 0.25,
+        "unit": "kg"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 2.5,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_148",
+    "scenario": "VALUE_ORDER",
+    "target_item": "poha",
+    "customerId": "CUST_38",
+    "noiseDb": 72,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "100 rupaye ka pohe de do",
+        "act": "VALUE_ORDER",
+        "value": 100
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 20,
+      "expectedDerivedCash": 100.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_149",
+    "scenario": "VALUE_ORDER",
+    "target_item": "tea",
+    "customerId": "CUST_02",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "50 rupaye ka chaha de do",
+        "act": "VALUE_ORDER",
+        "value": 50
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 10,
+      "expectedDerivedCash": 50.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  },
+  {
+    "dialogue_id": "DIAL_150",
+    "scenario": "SUCCESS_NEGOTIATION",
+    "target_item": "samosa",
+    "customerId": "CUST_20",
+    "noiseDb": 80,
+    "turns": [
+      {
+        "role": "CUSTOMER",
+        "text": "samosa kitne ka",
+        "act": "PRICE_INQUIRY"
+      },
+      {
+        "role": "VENDOR",
+        "text": "15 ka diya",
+        "act": "VENDOR_QUOTE",
+        "rate": 15
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "nahi 5 ka lagao",
+        "act": "CUSTOMER_COUNTER",
+        "rate": 5
+      },
+      {
+        "role": "VENDOR",
+        "text": "theek hai",
+        "act": "VENDOR_CONCESSION"
+      },
+      {
+        "role": "CUSTOMER",
+        "text": "do plate kar do",
+        "act": "QUANTITY_SPEC",
+        "qty": 2.0,
+        "unit": "plate"
+      }
+    ],
+    "ground_truth": {
+      "expectedAgreedRate": 5,
+      "expectedDerivedCash": 10.0,
+      "isWalkaway": false,
+      "isFreebie": false
+    }
+  }
+]
