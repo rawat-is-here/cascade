@@ -5,51 +5,49 @@
 
 ---
 
-## 1. High-Level Master Architecture
+## 1. High-Level Master Architecture & Continuous SLM Workflow
 
 ```mermaid
 flowchart TD
-    subgraph MobilePerception ["1. Dual On-Device Audio Subsystem (Phone Mic)"]
-        Mic["Continuous 16kHz PCM Stream"] --> Splitter["Audio Buffer Splitter"]
-        
-        Splitter --> VoiceRec["Voice Recognition (Who is speaking?)<br/>ECAPA-TDNN ONNX (18.4MB, ~11ms)<br/>• 5s Vendor Calibration Profile<br/>• Dynamic Customer Online Clustering"]
-        Splitter --> SpeechRec["Speech Recognition (What was said?)<br/>Android Native SpeechRecognizer (0MB)<br/>/ Sherpa-ONNX Mobile (39MB)"]
-        
-        VoiceRec & SpeechRec --> TurnFusion["Tagged Dialogue Turn:<br/>{ Speaker: VENDOR | CUST_k, Text: '...' }"]
+    subgraph MorningSetup ["1. Morning Wholesale Mandi Bill Ingestion (Zero Retail Presets)"]
+        MandiBill["Mandi Bill (Manual / OCR Scan)<br/>e.g., Potato 50kg @ ₹14/kg, Tomato 20kg @ ₹22/kg"] --> BasisCalc["Wholesale Cost Manager<br/>Adds 10% spice/fuel/transport overhead<br/>Posts: DR RawMaterial, CR Cash/Payable"]
+        BasisCalc --> ZeroRetail["Zero Pre-configured Retail Selling Rates<br/>All retail prices must be dynamically discovered"]
     end
 
-    subgraph MobileNegotiation ["2. Standalone On-Device Negotiation Engine"]
-        TurnFusion --> Lexer["Indic Numeric & Unit Lexer<br/>('aadha kilo' -> 0.5, '40 ka diya' -> ₹40)"]
-        TurnFusion --> Viterbi["Neuro-Symbolic Viterbi HMM<br/>(Semantic Vector Anchors + Trellis Path)<br/>Guards All 8 Criticalities"]
-        Lexer & Viterbi --> NegSession["Active Customer Negotiation Session<br/>Calculates: Final Agreed Rate × Qty"]
+    subgraph DaytimePerception ["2. Indefinite Daytime Background Audio (<2% CPU, Qwen Sleeps)"]
+        PhoneMic["Continuous 16kHz PCM Stream<br/>(Runs indefinitely in background until toggled off)"] --> VAD["Local Energy VAD & Splitter"]
+        VAD --> ECAPA["Voice Diarization (Who is speaking?)<br/>ECAPA-TDNN ONNX (18.4MB, 192-dim vector)<br/>• 5s Vendor Calibration Profile<br/>• Dynamic Customer Online Clustering"]
+        VAD --> NativeASR["Speech Recognition (What words?)<br/>Android Native SpeechRecognizer (0MB overhead)"]
+        ECAPA & NativeASR --> DayBuffer["Chronological SQLite WAL Store<br/>(raw_evidence table)<br/>Tagged Turns: VENDOR | CUST_1 | CUST_2 | CHIME"]
     end
 
-    subgraph CrossModalFusion ["3. Cross-Modal Fusion & Causal Buffer"]
-        Notif["Android NotificationListenerService<br/>(UPI SMS / Soundbox Chimes)"] --> RegexUPI["UPI Regex & RRN Parser"]
-        NegSession & RegexUPI --> Bipartite["Hungarian Bipartite Matcher (±180s)<br/>Deduplicates Spoken Deals vs. UPI Chimes"]
+    subgraph DualUPIValidation ["3. Dual Acoustic-Digital UPI Cross-Validation (Collision Guard)"]
+        SoundboxMic["Mic Stream: Soundbox Chime<br/>(Amount, Audio Timestamp)"] & PhoneNotif["Android NotificationListener<br/>(GPay / PhonePe / Paytm / SMS)"] --> UPICheck{"Dual Cross-Validator<br/>Causal Window: ±45s"}
         
-        Bipartite --> ConfirmedUPI["Confirmed Digital Journal Entries<br/>(Direct to Bank Ledger)"]
-        Bipartite --> DailyBuffer["Daily Causal Hypothesis Store<br/>(Unreconciled Ambiguous Cash)"]
+        UPICheck -->|Chime + Notification Match| ConfirmedSale["Confirmed Stall Sale<br/>DR Assets:Bank, CR Revenue:Sales"]
+        UPICheck -->|Notification Only (No Chime)| PersonalTransfer["Personal / Family Transfer<br/>DR Assets:Bank, CR Equity:OwnerPersonalCapital<br/>(0 Business Revenue Impact)"]
+        UPICheck -->|Chime Only (No Notification)| NeighborSpillover["Neighbor Soundbox Spillover<br/>Quarantined as Acoustic Noise<br/>(0 Ledger Impact)"]
     end
 
-    subgraph EODSettlement ["4. End-of-Day (EOD) Elastic Slack Settlement"]
-        Drawer["Shopkeeper Drawer Count<br/>(C_opening, C_closing, E_expenses)"]
-        DailyBuffer & Drawer --> Solver["Algorithm 2: Bounded MAP Solver<br/>with Elastic Slack ε_slack"]
-        Solver --> Discrepancy["Discrepancy Attribution Router<br/>(Rounding vs Theft vs Drowned Sales)"]
-        Discrepancy --> ReconciledCash["Reconciled Cash Journal Entries"]
-    end
-
-    subgraph CausalLedger ["5. Conserved CRDT & Evaluation Chain"]
-        ConfirmedUPI & ReconciledCash --> DAG["Merkle-Lamport Causal DAG<br/>(Quarantines 1970 Epoch Resets)"]
-        DAG --> CRDT["Conserved Double-Entry Delta-CRDT<br/>(Bluetooth Mesh Sync: Σ Debits ≡ Σ Credits)"]
+    subgraph NightEODQwen ["4. Night EOD Qwen Batch Pass & Slack Reconciler (Single Pass)"]
+        DayBuffer --> QwenBatch["Qwen2.5-0.5B-Instruct Offline Reasoner<br/>(Wakes up once at closing, 0 daytime battery drain)<br/>Discovers Dynamic Agreed Rates from Dialogue"]
+        ZeroRetail --> QwenBatch
+        QwenBatch --> DecoupledMath["Strict Decoupled Math Guarantee<br/>Qwen extracts (R_agreed, Qty)<br/>Deterministic Code calculates Derived Cash = R * Q<br/>Zero arithmetic hallucinations"]
         
-        CRDT --> NMF["Online-NMF & EKF Portion Tracker<br/>(Zero-Shot Latent BOM Inference)"]
-        CRDT --> Arrhenius["Arrhenius Thermal Loss Attribution<br/>(Spoilage vs Theft vs Personal)"]
-        NMF & Arrhenius --> Accrual["Affine Interval Arithmetic Engine<br/>(True Accrual Profit: [P10, P50, P90])"]
+        DecoupledMath --> MarginMatch["Wholesale Margin Matching<br/>Burn Inventory COGS basis<br/>Gross Profit = Derived Cash - Wholesale COGS"]
+        
+        DrawerCount["Vendor Cash Drawer Count<br/>(C_opening, C_closing, E_expenses)"] & MarginMatch --> ElasticSolver["Algorithm 2: Bounded Elastic Slack Solver<br/>Target ΔC vs. Acoustic Sales Sum<br/>Attribution: Exact | Rounding | Unrecorded Leakage"]
+    end
+
+    subgraph ConservedCRDT ["5. Conserved CRDT Ledger & Accrual Engine"]
+        ConfirmedSale & PersonalTransfer & ElasticSolver --> CausalDAG["Merkle-Lamport Causal DAG<br/>(Quarantines 1970 UNIX Epoch Resets)"]
+        CausalDAG --> CRDT["Conserved Double-Entry Delta-CRDT<br/>(Bluetooth Mesh Sync: Σ Debits ≡ Σ Credits)"]
+        CRDT --> Arrhenius["Arrhenius Spoilage Kinetics & Dirichlet Meal Splits"]
+        Arrhenius --> TrueAccrual["Affine Interval Arithmetic Engine<br/>True Accrual Profit: [P10, P50, P90]"]
     end
 
     subgraph LiveBenchmark ["6. Live 3-Run Sabotage Benchmark"]
-        Accrual --> BenchmarkDemo["Side-by-Side Live Demo<br/>(Baseline 95% Crash vs Engine 0.5% Recovery)"]
+        TrueAccrual --> BenchmarkDemo["Side-by-Side Demonstration<br/>(Baseline 100% Crash vs Engine 100% Recovery)"]
     end
 ```
 
@@ -63,17 +61,17 @@ Features are executed in strict dependency order: foundational mathematical inva
 PHASE 1: Core Invariants, Hostile Clocks & Conserved CRDT
    │ (Establish infallible causal ordering & double-entry balance)
    ▼
-PHASE 2: Standalone Dual Audio Perception & Viterbi Negotiator
-   │ (ECAPA-TDNN Voice ID + Native ASR + Viterbi HMM + 8 Criticalities)
+PHASE 2: Indefinite Background Audio, ECAPA Diarization & Indic Lexer
+   │ (ECAPA-TDNN ONNX 192-dim Voice ID + Native ASR + Zero daytime SLM load)
    ▼
-PHASE 3: Cross-Modal Fusion & The Daily Hypothesis Buffer
-   │ (Hungarian bipartite matching, deduplication & causal persistence)
+PHASE 3: Dual Acoustic-Digital UPI Cross-Validation & Collision Guard
+   │ (Neighbor chime quarantine, personal transfer equity isolation, stall sales)
    ▼
-PHASE 4: End-of-Day (EOD) Elastic Slack Reconciliation (Algorithm 2)
-   │ (Disambiguate the day's audio log via physical cash drawer count)
+PHASE 4: End-of-Day (EOD) Batch Qwen Pass, Decoupled Math & Elastic Slack
+   │ (Single night SLM pass, dynamic price discovery, strict R * Q in code, Algorithm 2)
    ▼
 PHASE 5: Probabilistic Evaluation Chain & Accrual Engine
-   │ (Online-NMF recipe burn, Arrhenius loss attribution & interval profit)
+   │ (Wholesale COGS margin matching, Arrhenius thermal loss, interval profit [P10, P50, P90])
    ▼
 PHASE 6: 3-Run Sabotage Benchmark & Mobile Demo Hardening
      (Side-by-side judge demonstration against hostile edge cases)

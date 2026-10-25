@@ -31,7 +31,7 @@ interface Dialogue {
 }
 
 export function evaluateProductionAI() {
-  const datasetPath = join(process.cwd(), 'evaluation', 'datasets', 'indic_negotiations_150.json');
+  const datasetPath = join(process.cwd(), 'evaluation', 'datasets', 'indic_negotiations_1500.json');
   const dataset: Dialogue[] = JSON.parse(readFileSync(datasetPath, 'utf8'));
 
   let totalDialogues = dataset.length;
