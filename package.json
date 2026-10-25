@@ -1,5 +1,5 @@
 {
-  "name": "cascade-hackathon-monorepo",
+  "name": "cascade-hackathon",
   "version": "1.0.0",
   "private": true,
   "description": "0.5% Anti-Template Hackathon Architecture with Expo Go Mobile + Node.js Backend",
@@ -10,16 +10,6 @@
     "benchmark": "ts-node evaluation/benchmark.ts",
     "test": "npm --prefix server test"
   },
-  "workspaces": [
-    "server",
-    "mobile"
-  ],
   "author": "Team Cascade (Akash, Thackrey, Aryan, Manthan)",
-  "license": "MIT",
-  "dependencies": {
-    "expo": "~58.0.19"
-  },
-  "devDependencies": {
-    "@types/react": "~19.3.0"
-  }
+  "license": "MIT"
 }
