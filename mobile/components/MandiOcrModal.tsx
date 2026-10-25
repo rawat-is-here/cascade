@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { MandiOcrService, MandiParsedReceipt } from '../services/MandiOcrService';
 
 interface SlipItem {
   name: string;
@@ -150,38 +151,68 @@ export const MandiOcrModal: React.FC<Props> = ({
     }
   };
 
-  // Send photo to backend OCR engine
-  const processOcrOnSlip = async (base64?: string | null, uri?: string) => {
+  // Process photo with on-device Google ML Kit Text Recognition & backend verification
+  const processOcrOnSlip = async (base64?: string | null, uri?: string, presetKey?: 'AZADPUR' | 'VASHI' | 'PUNE') => {
     setLoading(true);
     setScanStep('SCANNING');
 
     try {
-      const res = await fetch(`${apiBaseUrl}/vendor/wholesale/ocr`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageBase64: base64,
-          imageUri: uri
-        })
-      });
+      let recognizedReceipt: MandiParsedReceipt | null = null;
 
-      const data = await res.json();
-      if (data.ok && data.slip) {
-        const slip = data.slip;
-        setMandiName(slip.mandiName || 'Azadpur Subzi Mandi Wholesale');
-        setSlipNo(slip.slipNo || `MND-${Math.floor(10000 + Math.random() * 90000)}`);
-        setSlipDate(slip.date || 'Today, ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
-        setItems(slip.items || []);
-        setScanStep('PARSED');
-      } else {
-        setScanStep('PARSED');
+      // 1. If presetKey is selected, parse sample mandi slip text
+      if (presetKey) {
+        const sampleText = MandiOcrService.getSampleMandiReceiptText(presetKey);
+        recognizedReceipt = MandiOcrService.parseMandiReceiptText(sampleText);
+      } else if (uri) {
+        // 2. Run Google ML Kit On-Device Text Recognition on physical image
+        try {
+          recognizedReceipt = await MandiOcrService.recognizeSlip(uri);
+        } catch (mlKitErr) {
+          console.warn('[ML Kit] On-device OCR fallback:', mlKitErr);
+        }
       }
-    } catch {
-      // Offline fallback: keep loaded items for verification
+
+      // 3. Post to backend wholesale OCR endpoint to log evidence in SQLite
+      let serverSlip: any = null;
+      try {
+        const res = await fetch(`${apiBaseUrl}/vendor/wholesale/ocr`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: base64,
+            imageUri: uri,
+            rawText: recognizedReceipt?.rawText || ''
+          })
+        });
+        const data = await res.json();
+        if (data.ok && data.slip) {
+          serverSlip = data.slip;
+        }
+      } catch (netErr) {
+        console.warn('[MandiOCR] Backend offline, utilizing local ML Kit parse:', netErr);
+      }
+
+      const finalSlip = serverSlip || recognizedReceipt;
+      if (finalSlip) {
+        setMandiName(finalSlip.mandiName || 'Azadpur Subzi Mandi Wholesale');
+        setSlipNo(finalSlip.slipNo || `MND-${Math.floor(10000 + Math.random() * 90000)}`);
+        setSlipDate(finalSlip.date || 'Today, ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
+        if (finalSlip.items && finalSlip.items.length > 0) {
+          setItems(finalSlip.items);
+        }
+      }
+
+      setScanStep('PARSED');
+    } catch (err) {
+      console.error('[MandiOCR] Optical processing failure:', err);
       setScanStep('PARSED');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTestPreset = (presetKey: 'AZADPUR' | 'VASHI' | 'PUNE') => {
+    processOcrOnSlip(null, undefined, presetKey);
   };
 
   // Dynamic calculations
@@ -366,6 +397,38 @@ export const MandiOcrModal: React.FC<Props> = ({
                   <Ionicons name="images-outline" size={16} color="#374151" style={{ marginRight: 6 }} />
                   <Text style={styles.galleryBtnText}>Choose from Photo Gallery</Text>
                 </TouchableOpacity>
+
+                {/* Quick Offline Sample Slips for Testing Without Physical Paper */}
+                <View style={{ marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#E5E7EB', width: '100%' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 }}>
+                    Offline Testing: Test Pre-Scanned Mandi Slips
+                  </Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <TouchableOpacity
+                      style={{ flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 8, paddingHorizontal: 6, borderRadius: 8, marginRight: 6, alignItems: 'center' }}
+                      onPress={() => handleTestPreset('AZADPUR')}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#073B3A' }}>Azadpur Delhi</Text>
+                      <Text style={{ fontSize: 9, color: '#6B7280' }}>₹1,720 (3 items)</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={{ flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 8, paddingHorizontal: 6, borderRadius: 8, marginHorizontal: 3, alignItems: 'center' }}
+                      onPress={() => handleTestPreset('VASHI')}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#073B3A' }}>Vashi APMC</Text>
+                      <Text style={{ fontSize: 9, color: '#6B7280' }}>₹3,520 (Bori/Crate)</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={{ flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 8, paddingHorizontal: 6, borderRadius: 8, marginLeft: 6, alignItems: 'center' }}
+                      onPress={() => handleTestPreset('PUNE')}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#073B3A' }}>Pune Market</Text>
+                      <Text style={{ fontSize: 9, color: '#6B7280' }}>₹3,260 (Poha/Oil)</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
             )}
 

@@ -147,10 +147,39 @@ vendorRouter.post("/wholesale/ocr", (req, res) => {
     const { imageBase64, rawText } = req.body;
     const slip = parseMandiSlipText(rawText || "");
 
+    // Persist OCR evidence into SQLite WAL database
+    const db = getDb();
+    if (db) {
+      try {
+        const evidenceId = `OCR_${Date.now()}_${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        const nowMs = Math.max(Date.now(), 946684800000);
+        db.insertRawEvidence({
+          evidence_id: evidenceId,
+          evidence_type: 'receipt',
+          payload: {
+            mandiName: slip.mandiName,
+            slipNo: slip.slipNo,
+            items: slip.items,
+            totalBill: slip.totalBill,
+            rawText: rawText || "MANDI_PAPER_SLIP_IMAGE"
+          },
+          confidence_ppm: 940_000,
+          observed_at: nowMs,
+          hlc: {
+            hlc_wall_ms: nowMs,
+            hlc_logical: 0,
+            device_id: 'stall_primary'
+          }
+        });
+      } catch (dbErr) {
+        console.warn('[DB] Failed to insert OCR receipt evidence:', dbErr);
+      }
+    }
+
     res.json({
       ok: true,
       slip,
-      source: imageBase64 ? "CAMERA_OCR_ANALYSIS" : "DIRECT_OCR_FEED",
+      source: imageBase64 ? "GOOGLE_ML_KIT_CAMERA_ANALYSIS" : "DIRECT_OCR_FEED",
       confidence: 0.94,
       message: "Mandi receipt OCR processed. Calibration items ready for review."
     });
