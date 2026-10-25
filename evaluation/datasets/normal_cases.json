@@ -1,0 +1,16 @@
+[
+  {
+    "id": "norm-001",
+    "timestamp": 1729840000000,
+    "source": "sensor-alpha",
+    "rawInput": "Routine operational telemetry at normal load",
+    "metadata": { "temperature": 24.5, "network": "4G" }
+  },
+  {
+    "id": "norm-002",
+    "timestamp": 1729840060000,
+    "source": "sensor-beta",
+    "rawInput": "Transaction payment processed: 140 INR",
+    "metadata": { "status": "CONFIRMED" }
+  }
+]

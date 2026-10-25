@@ -1,0 +1,24 @@
+[
+  {
+    "id": "adv-001-clock-reset",
+    "timestamp": 0,
+    "source": "battery-dead-phone",
+    "rawInput": "Clock reset to 1970-01-01 00:00:00 UTC after sudden battery depletion",
+    "metadata": { "batteryLevel": 1, "noiseDb": 35 }
+  },
+  {
+    "id": "adv-002-acoustic-noise",
+    "timestamp": 1729840120000,
+    "source": "street-mic",
+    "rawInput": "Bhai 3 kilo tamatar... [88dB truck horn] ...Sharma ji 40 jama",
+    "metadata": { "noiseDb": 88, "trafficLevel": "HEAVY" }
+  },
+  {
+    "id": "adv-003-causal-inversion",
+    "timestamp": 1729840180000,
+    "logicalLamportClock": -1,
+    "source": "out-of-order-mesh-node",
+    "rawInput": "Ledger debit event arriving before causal credit parent",
+    "metadata": { "syncLagMs": 45000 }
+  }
+]
