@@ -232,6 +232,18 @@ export interface LedgerEntryInput {
   readonly is_deleted?: 0 | 1;
 }
 
+export interface RawEvidenceInput {
+  readonly evidence_id: string;
+  readonly evidence_type: EvidenceType;
+  readonly payload_json: string;
+  readonly content_sha256?: string | null;
+  readonly observed_at?: number | null;
+  readonly source_entity_id?: EntityId | null;
+  readonly confidence_ppm?: Ppm;
+  readonly hlc: HlcTuple;
+  readonly is_deleted?: 0 | 1;
+}
+
 export function assertHlcTuple(value: { hlc_wall_ms: number; hlc_logical: number; device_id: string }): HlcTuple {
   if (!Number.isInteger(value.hlc_wall_ms) || value.hlc_wall_ms < MIN_VALID_HLC_MS) throw new Error('Invalid HLC wall time');
   if (!Number.isInteger(value.hlc_logical) || value.hlc_logical < 0) throw new Error('Invalid HLC logical counter');

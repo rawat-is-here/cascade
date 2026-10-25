@@ -7,10 +7,12 @@ import cors from 'cors';
 import { WebSocketServer, WebSocket } from 'ws';
 import { vendorRouter } from './routes/vendor';
 import { initializeDatabase } from './db/database';
+import { registerWsClient, broadcast } from './broadcast';
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
+wss.on('connection', (ws) => registerWsClient(ws));
 
 app.use(cors());
 app.use(express.json());
@@ -22,7 +24,7 @@ let currentMode = {
   intensity: 0
 };
 
-function broadcast(payload: any) {
+function _legacyLocalBroadcast(payload: any) {
   const msg = JSON.stringify(payload);
   wss.clients.forEach(c => {
     if (c.readyState === WebSocket.OPEN) c.send(msg);
