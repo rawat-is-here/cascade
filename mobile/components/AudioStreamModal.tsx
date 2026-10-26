@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,14 +10,18 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 
-interface AudioTurnLog {
+export interface AudioTurnLog {
   id: string;
-  speaker: 'VENDOR' | 'CUST_1' | 'CUST_2' | 'SOUNDBOX_CHIME';
+  speaker: 'VENDOR' | 'CUSTOMER';
   text: string;
   timestamp: string;
-  noiseDb: number;
   confidence: number;
+  noiseDb: number;
+  needsConfirmation?: boolean;
+  confirmed?: boolean;
   evidenceId?: string;
 }
 
@@ -34,108 +38,349 @@ export const AudioStreamModal: React.FC<Props> = ({
   apiBaseUrl,
   onTurnLogged
 }) => {
-  const [isRecording, setIsRecording] = useState(true);
-  const [decibels, setDecibels] = useState(62);
-  const [vadActive, setVadActive] = useState(true);
-  const [selectedSpeaker, setSelectedSpeaker] = useState<'VENDOR' | 'CUST_1' | 'CUST_2' | 'SOUNDBOX_CHIME'>('VENDOR');
-  const [inputText, setInputText] = useState('');
+  const [sessionActive, setSessionActive] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [calibrating, setCalibrating] = useState(false);
-  const [calibrated, setCalibrated] = useState(true);
-  const [history, setHistory] = useState<AudioTurnLog[]>([
-    {
-      id: '1',
-      speaker: 'CUST_1',
-      text: 'Bhaiya 1 kilo tamatar kitne ka diya?',
-      timestamp: '12:44:10 PM',
-      noiseDb: 64,
-      confidence: 0.94,
-      evidenceId: 'CHUNK_1729924810_1'
+  const [transcripts, setTranscripts] = useState<AudioTurnLog[]>([]);
+  const [quickInput, setQuickInput] = useState('');
+  const [processingTurn, setProcessingTurn] = useState(false);
+  const [sessionNoiseDb, setSessionNoiseDb] = useState(48);
+
+  // Confidence Gate (< 80%) State
+  const [pendingConfirm, setPendingConfirm] = useState<AudioTurnLog | null>(null);
+  const [editText, setEditText] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+
+  const isMountedRef = useRef(true);
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const sessionActiveRef = useRef(false);
+  const sliceTimerRef = useRef<any>(null);
+  const speechDetectedRef = useRef(false);
+
+  const RECORDING_OPTIONS: Audio.RecordingOptions = {
+    android: {
+      extension: '.m4a',
+      outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+      audioEncoder: Audio.AndroidAudioEncoder.AAC,
+      sampleRate: 44100,
+      numberOfChannels: 1,
+      bitRate: 128000
     },
-    {
-      id: '2',
-      speaker: 'VENDOR',
-      text: 'Tamatar 30 rupay kilo hai bhai.',
-      timestamp: '12:44:14 PM',
-      noiseDb: 61,
-      confidence: 0.97,
-      evidenceId: 'CHUNK_1729924814_2'
-    }
-  ]);
+    ios: {
+      extension: '.m4a',
+      outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+      audioQuality: Audio.IOSAudioQuality.HIGH,
+      sampleRate: 44100,
+      numberOfChannels: 1,
+      bitRate: 128000,
+      linearPCMBitDepth: 16,
+      linearPCMIsBigEndian: false,
+      linearPCMIsFloat: false
+    },
+    web: {
+      mimeType: 'audio/webm',
+      bitsPerSecond: 128000
+    },
+    isMeteringEnabled: true
+  };
 
-  // Decibel meter fluctuation simulation
-  useEffect(() => {
-    if (!visible || !isRecording) return;
-    const interval = setInterval(() => {
-      const base = vadActive ? 64 : 48;
-      const noise = Math.round(base + (Math.random() * 12 - 6));
-      setDecibels(noise);
-      setVadActive(noise > 55);
-    }, 800);
-    return () => clearInterval(interval);
-  }, [visible, isRecording, vadActive]);
-
-  const handleSendTurn = async (speaker: 'VENDOR' | 'CUST_1' | 'CUST_2' | 'SOUNDBOX_CHIME', textToSend: string) => {
-    if (!textToSend.trim()) return;
-    setLoading(true);
-
-    const timeMs = Date.now();
-    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const noise = Math.round(58 + Math.random() * 14);
-    const conf = 0.95;
-
+  const startSessionRecording = async (): Promise<boolean> => {
     try {
-      const res = await fetch(`${apiBaseUrl}/vendor/audio/turn`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          speaker,
-          text: textToSend,
-          timestamp: timeMs,
-          confidence: conf,
-          noiseDb: noise
-        })
+      const perm = await Audio.requestPermissionsAsync();
+      if (!perm.granted) {
+        alert('Microphone permission required for continuous session.');
+        return false;
+      }
+      // ★ CRITICAL: set allowsRecordingIOS before every prepareToRecordAsync
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS:         true,   // unlocks mic on iOS/Android
+        playsInSilentModeIOS:       true,
+        staysActiveInBackground:    true,
+        shouldDuckAndroid:          true,
+        playThroughEarpieceAndroid: false
       });
-      const data = await res.json();
 
-      const newTurn: AudioTurnLog = {
-        id: `turn-${timeMs}`,
-        speaker,
-        text: textToSend,
-        timestamp: timeStr,
-        noiseDb: noise,
-        confidence: conf,
-        evidenceId: data.evidenceId || `CHUNK_${timeMs}_1`
-      };
+      const rec = new Audio.Recording();
+      await rec.prepareToRecordAsync(RECORDING_OPTIONS);
+      rec.setOnRecordingStatusUpdate((status) => {
+        if (status.isRecording && status.metering !== undefined) {
+          const clamped = Math.max(-60, Math.min(0, status.metering));
+          const db = Math.round(42 + ((clamped + 60) / 60) * 48);
+          setSessionNoiseDb(db);
+          if ((clamped + 60) / 60 > 0.22) {
+            speechDetectedRef.current = true;
+          }
+        }
+      });
+      await rec.startAsync();
+      recordingRef.current = rec;
+      return true;
+    } catch (err: any) {
+      console.warn('[AudioSession] startSessionRecording failed:', err?.message || err);
+      return false;
+    }
+  };
 
-      setHistory(prev => [newTurn, ...prev]);
-      setInputText('');
-      if (onTurnLogged) onTurnLogged(newTurn);
+  const processSessionAudioChunk = async (rec: Audio.Recording) => {
+    try {
+      // Don't check isRecording — the timer may have already stopped it
+      try { await rec.stopAndUnloadAsync(); } catch {}
+      const uri = rec.getURI();
+      if (uri) {
+        const base64Audio = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64
+        });
+        FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+
+        if (base64Audio && base64Audio.length > 1000) {
+          const res = await fetch(`${apiBaseUrl}/vendor/audio/transcribe`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              audioBase64: base64Audio,
+              mimeType: 'audio/mp4'
+            })
+          });
+          const data = await res.json();
+          if (data && data.ok && data.text && data.text.trim()) {
+            handleIncomingTranscript(
+              data.text.trim(),
+              data.speaker || 'CUSTOMER',
+              typeof data.confidence === 'number' ? data.confidence : 0.92,
+              data.noiseDb || sessionNoiseDb
+            );
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn('[AudioSession] processSessionAudioChunk failed:', err?.message || err);
+    }
+  };
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    if (visible) {
+      loadSessionTranscripts();
+    }
+    return () => {
+      isMountedRef.current = false;
+      if (sliceTimerRef.current) {
+        clearInterval(sliceTimerRef.current);
+      }
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+      }
+    };
+  }, [visible, apiBaseUrl]);
+
+  // Load existing session turns from server SQLite WAL
+  const loadSessionTranscripts = async () => {
+    try {
+      const res = await fetch(`${apiBaseUrl}/vendor/audio/turns`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.turns)) {
+          const list: AudioTurnLog[] = data.turns.map((t: any) => ({
+            id: t.id,
+            speaker: t.speakerClassification === 'VENDOR' ? 'VENDOR' : 'CUSTOMER',
+            text: t.rawText,
+            timestamp: new Date(t.timestamp).toLocaleTimeString('en-IN', {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit'
+            }),
+            confidence: t.sttConfidence ?? 0.95,
+            noiseDb: t.noiseDb || 60,
+            evidenceId: t.id,
+            confirmed: true
+          }));
+          setTranscripts(list.reverse());
+        }
+      }
     } catch {
-      // Local fallback
-      const newTurn: AudioTurnLog = {
-        id: `turn-${timeMs}`,
-        speaker,
-        text: textToSend,
-        timestamp: timeStr,
-        noiseDb: noise,
-        confidence: conf,
-        evidenceId: `OFFLINE_CHUNK_${timeMs}`
-      };
-      setHistory(prev => [newTurn, ...prev]);
-      setInputText('');
-      if (onTurnLogged) onTurnLogged(newTurn);
+      // Offline fallback
+    }
+  };
+
+  // THE SINGLE BUTTON: Start Session / End Session
+  const handleToggleSession = async () => {
+    setLoading(true);
+    try {
+      if (sessionActive) {
+        // End Session
+        sessionActiveRef.current = false;
+        setSessionActive(false);
+        if (sliceTimerRef.current) {
+          clearInterval(sliceTimerRef.current);
+          sliceTimerRef.current = null;
+        }
+        if (recordingRef.current) {
+          try {
+            await recordingRef.current.stopAndUnloadAsync();
+          } catch {}
+          recordingRef.current = null;
+        }
+      } else {
+        // Start Session
+        const ok = await startSessionRecording();
+        if (ok) {
+          sessionActiveRef.current = true;
+          setSessionActive(true);
+          sliceTimerRef.current = setInterval(async () => {
+            if (!sessionActiveRef.current) return;
+            if (speechDetectedRef.current && recordingRef.current) {
+              speechDetectedRef.current = false;
+              const current = recordingRef.current;
+              recordingRef.current = null;
+              // startSessionRecording already calls setAudioModeAsync before prepareToRecordAsync
+              await startSessionRecording();
+              processSessionAudioChunk(current);
+            }
+          }, 5000);
+        }
+      }
+    } catch (err) {
+      console.warn('Session toggle error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCalibrateVendorVoice = () => {
-    setCalibrating(true);
-    setTimeout(() => {
-      setCalibrating(false);
-      setCalibrated(true);
-    }, 2500);
+  // Process incoming turn from Gemini transcription
+  const handleIncomingTranscript = async (
+    text: string,
+    speaker: 'VENDOR' | 'CUSTOMER',
+    confidence: number,
+    noiseDb: number = 60
+  ) => {
+    const timeMs = Date.now();
+    const timeStr = new Date(timeMs).toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
+    const turn: AudioTurnLog = {
+      id: `turn-${timeMs}`,
+      speaker,
+      text,
+      timestamp: timeStr,
+      confidence,
+      noiseDb,
+      needsConfirmation: confidence < 0.80,
+      confirmed: confidence >= 0.80
+    };
+
+    // Low confidence gate (< 80%)
+    if (confidence < 0.80) {
+      setPendingConfirm(turn);
+      setEditText(text);
+      setIsEditing(false);
+    } else {
+      commitTurnToBackend(turn);
+    }
+
+    setTranscripts(prev => [turn, ...prev]);
+  };
+
+  const commitTurnToBackend = async (turn: AudioTurnLog) => {
+    try {
+      const res = await fetch(`${apiBaseUrl}/vendor/audio/turn`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          speaker: turn.speaker === 'VENDOR' ? 'VENDOR' : 'CUST_1',
+          text: turn.text,
+          timestamp: Date.now(),
+          confidence: turn.confidence,
+          noiseDb: turn.noiseDb
+        })
+      });
+      const data = await res.json();
+      turn.evidenceId = data.evidenceId;
+      if (onTurnLogged) onTurnLogged(turn);
+    } catch {
+      turn.evidenceId = `OFFLINE_${Date.now()}`;
+      if (onTurnLogged) onTurnLogged(turn);
+    }
+  };
+
+  // 1. Confirm transcript as correct (< 90% verified)
+  const handleConfirmPending = () => {
+    if (!pendingConfirm) return;
+    const confirmedTurn: AudioTurnLog = {
+      ...pendingConfirm,
+      needsConfirmation: false,
+      confirmed: true
+    };
+
+    setTranscripts(prev => prev.map(t => (t.id === confirmedTurn.id ? confirmedTurn : t)));
+    commitTurnToBackend(confirmedTurn);
+    setPendingConfirm(null);
+    setIsEditing(false);
+  };
+
+  // 2. Save manual edit
+  const handleSaveManualEdit = () => {
+    if (!pendingConfirm || !editText.trim()) return;
+    const editedTurn: AudioTurnLog = {
+      ...pendingConfirm,
+      text: editText.trim(),
+      confidence: 1.0, // Vendor manually confirmed text
+      needsConfirmation: false,
+      confirmed: true
+    };
+
+    setTranscripts(prev => prev.map(t => (t.id === editedTurn.id ? editedTurn : t)));
+    commitTurnToBackend(editedTurn);
+    setPendingConfirm(null);
+    setIsEditing(false);
+  };
+
+  // 3. Discard noisy/unintelligible transcript
+  const handleDiscardPending = () => {
+    if (!pendingConfirm) return;
+    setTranscripts(prev => prev.filter(t => t.id !== pendingConfirm.id));
+    setPendingConfirm(null);
+    setIsEditing(false);
+  };
+
+  // Submit spoken phrase to backend Gemini STT
+  const handleSubmitSpokenPhrase = async (simulatedConf?: number) => {
+    const raw = quickInput.trim();
+    if (!raw) return;
+    setProcessingTurn(true);
+
+    try {
+      const res = await fetch(`${apiBaseUrl}/vendor/audio/transcribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: raw,
+          simulatedConf
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.ok) {
+          handleIncomingTranscript(
+            data.text,
+            data.speaker || 'CUSTOMER',
+            data.confidence,
+            data.noiseDb || 60
+          );
+        }
+      } else {
+        // Fallback
+        handleIncomingTranscript(raw, 'CUSTOMER', simulatedConf ?? 0.95, 60);
+      }
+    } catch {
+      // Offline fallback
+      handleIncomingTranscript(raw, 'CUSTOMER', simulatedConf ?? 0.95, 60);
+    } finally {
+      setProcessingTurn(false);
+      setQuickInput('');
+    }
   };
 
   return (
@@ -145,169 +390,282 @@ export const AudioStreamModal: React.FC<Props> = ({
           {/* Header */}
           <View style={styles.modalHeader}>
             <View style={styles.headerTitleRow}>
-              <View style={styles.micIconBox}>
-                <Ionicons name="mic" size={18} color="#073B3A" />
-              </View>
-              <View style={{ marginLeft: 10 }}>
-                <Text style={styles.modalTitle}>Continuous Audio Stream</Text>
-                <Text style={styles.modalSubtitle}>POST /audio/turn Hardware Binding</Text>
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: sessionActive ? '#10B981' : '#9CA3AF' }
+                ]}
+              />
+              <View>
+                <Text style={styles.modalTitle}>Continuous Audio Session</Text>
+                <Text style={styles.modalSubtitle}>
+                  {sessionActive
+                    ? 'Session Active • Neural Acoustic Live Stream'
+                    : 'Session Inactive • Tap to Start'}
+                </Text>
               </View>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={20} color="#6B7280" />
+              <Ionicons name="close" size={22} color="#6B7280" />
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollBody}>
-            {/* Live Audio Visualizer Banner */}
-            <View style={styles.visualizerCard}>
-              <View style={styles.visualizerTopRow}>
-                <View style={styles.streamBadge}>
-                  <View style={[styles.liveDot, { backgroundColor: isRecording ? '#10B981' : '#9CA3AF' }]} />
-                  <Text style={styles.streamBadgeText}>
-                    {isRecording ? 'STREAMING 16kHz PCM' : 'STREAM MUTED'}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.streamToggle, isRecording ? styles.streamTogglePause : styles.streamToggleStart]}
-                  onPress={() => setIsRecording(prev => !prev)}
-                >
-                  <Ionicons name={isRecording ? 'pause' : 'play'} size={12} color="#073B3A" style={{ marginRight: 4 }} />
-                  <Text style={styles.streamToggleText}>{isRecording ? 'Pause' : 'Resume'}</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Pulsing Frequency Bars */}
-              <View style={styles.frequencyBarsRow}>
-                {[0.4, 0.7, 1.0, 0.6, 0.9, 0.5, 0.8, 0.3, 0.9, 0.7].map((heightScale, idx) => (
-                  <View
-                    key={idx}
-                    style={[
-                      styles.freqBar,
-                      {
-                        height: isRecording ? Math.max(10, Math.min(48, decibels * heightScale * 0.7)) : 8,
-                        backgroundColor: idx % 2 === 0 ? '#E2FD52' : '#FFFFFF'
-                      }
-                    ]}
-                  />
-                ))}
-              </View>
-
-              {/* Readout metrics */}
-              <View style={styles.metricsRow}>
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>DECIBEL LEVEL</Text>
-                  <Text style={styles.metricValue}>{decibels} dB</Text>
-                </View>
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>VAD SPEECH</Text>
-                  <Text style={[styles.metricValue, { color: vadActive ? '#E2FD52' : '#9CA3AF' }]}>
-                    {vadActive ? 'DETECTED' : 'QUIET'}
-                  </Text>
-                </View>
-                <View style={styles.metricItem}>
-                  <Text style={styles.metricLabel}>PROFILE</Text>
-                  <Text style={styles.metricValue}>{calibrated ? 'VENDOR ENROLLED' : 'UNCALIBRATED'}</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Vendor Voice Profile Calibration Button */}
+          {/* THE SINGLE BUTTON: START SESSION / END SESSION */}
+          <View style={styles.singleButtonContainer}>
             <TouchableOpacity
-              style={styles.calibratePill}
-              onPress={handleCalibrateVendorVoice}
-              disabled={calibrating}
+              style={[
+                styles.mainSessionBtn,
+                sessionActive ? styles.endSessionBtn : styles.startSessionBtn
+              ]}
+              onPress={handleToggleSession}
+              disabled={loading}
+              activeOpacity={0.85}
             >
-              <Ionicons name={calibrating ? 'hourglass-outline' : 'finger-print-outline'} size={16} color="#073B3A" style={{ marginRight: 8 }} />
-              <Text style={styles.calibrateText}>
-                {calibrating ? 'Enrolling Voice Profile (ECAPA-TDNN 192-dim)...' : 'Re-Calibrate Vendor Voice (5s Enrollment)'}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Quick Stream Turn Presets */}
-            <Text style={styles.sectionHeading}>Stream Pre-Synthesized Turns to /audio/turn</Text>
-            <View style={styles.presetButtonsRow}>
-              <TouchableOpacity
-                style={styles.presetBtn}
-                onPress={() => handleSendTurn('VENDOR', '1 kilo tamatar 30 rupay le jao.')}
-                disabled={loading}
-              >
-                <Text style={styles.presetSpeaker}>VENDOR</Text>
-                <Text style={styles.presetText}>“1 kilo tamatar ₹30”</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.presetBtn}
-                onPress={() => handleSendTurn('CUST_1', 'Bhaiya 2 plate poha dena jaldi.')}
-                disabled={loading}
-              >
-                <Text style={styles.presetSpeaker}>CUSTOMER</Text>
-                <Text style={styles.presetText}>“2 plate poha dena”</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.presetBtn}
-                onPress={() => handleSendTurn('SOUNDBOX_CHIME', 'Paytm par 140 rupay prapt hue.')}
-                disabled={loading}
-              >
-                <Text style={styles.presetSpeaker}>SOUNDBOX</Text>
-                <Text style={styles.presetText}>“₹140 received”</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Custom Spoken Turn Input */}
-            <Text style={styles.sectionHeading}>Simulate Custom Spoken Turn</Text>
-            <View style={styles.inputContainer}>
-              <View style={styles.speakerSelectorRow}>
-                {(['VENDOR', 'CUST_1', 'SOUNDBOX_CHIME'] as const).map(role => (
-                  <TouchableOpacity
-                    key={role}
-                    style={[styles.speakerPill, selectedSpeaker === role && styles.speakerPillActive]}
-                    onPress={() => setSelectedSpeaker(role)}
+              {loading ? (
+                <ActivityIndicator color={sessionActive ? '#FFFFFF' : '#073B3A'} size="small" />
+              ) : (
+                <>
+                  <Ionicons
+                    name={sessionActive ? 'stop-circle' : 'play-circle'}
+                    size={26}
+                    color={sessionActive ? '#FFFFFF' : '#073B3A'}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text
+                    style={[
+                      styles.mainSessionBtnText,
+                      sessionActive ? styles.endSessionBtnText : styles.startSessionBtnText
+                    ]}
                   >
-                    <Text style={[styles.speakerPillText, selectedSpeaker === role && styles.speakerPillTextActive]}>
-                      {role}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                    {sessionActive ? 'End Session' : 'Start Session'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* CONFIRMATION / MANUAL EDIT CARD (< 80% Confidence Gate) */}
+          {pendingConfirm && (
+            <View style={styles.confirmAlertCard}>
+              <View style={styles.confirmAlertHeader}>
+                <View style={styles.warningIconCircle}>
+                  <Ionicons name="warning" size={16} color="#D97706" />
+                </View>
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={styles.confirmAlertTitle}>
+                    Confirm Transcript ({Math.round(pendingConfirm.confidence * 100)}% &lt; 80%)
+                  </Text>
+                  <Text style={styles.confirmAlertSubtitle}>
+                    Speech confidence below threshold. Was this transcript accurate?
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.inputRow}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter spoken customer or vendor phrase..."
-                  placeholderTextColor="#9CA3AF"
-                  value={inputText}
-                  onChangeText={setInputText}
-                />
+              {!isEditing ? (
+                <>
+                  <View style={styles.spokenQuoteBox}>
+                    <Text style={styles.spokenQuoteText}>“{pendingConfirm.text}”</Text>
+                  </View>
+                  <View style={styles.confirmActionsRow}>
+                    <TouchableOpacity
+                      style={styles.confirmBtnPrimary}
+                      onPress={handleConfirmPending}
+                    >
+                      <Ionicons name="checkmark-circle" size={16} color="#073B3A" />
+                      <Text style={styles.confirmBtnPrimaryText}>Correct</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.confirmBtnSecondary}
+                      onPress={() => setIsEditing(true)}
+                    >
+                      <Ionicons name="pencil" size={15} color="#1F2937" />
+                      <Text style={styles.confirmBtnSecondaryText}>Edit</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.confirmBtnDiscard}
+                      onPress={handleDiscardPending}
+                    >
+                      <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                      <Text style={styles.confirmBtnDiscardText}>Discard</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.editSection}>
+                  <Text style={styles.editLabel}>Edit Spoken Words:</Text>
+                  <TextInput
+                    style={styles.editInput}
+                    value={editText}
+                    onChangeText={setEditText}
+                    placeholder="Enter corrected transcript in Hindi/English..."
+                    placeholderTextColor="#9CA3AF"
+                    autoFocus
+                  />
+                  <View style={styles.editActionsRow}>
+                    <TouchableOpacity
+                      style={styles.saveEditBtn}
+                      onPress={handleSaveManualEdit}
+                    >
+                      <Ionicons name="save-outline" size={15} color="#073B3A" />
+                      <Text style={styles.saveEditText}>Save & Confirm</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.cancelEditBtn}
+                      onPress={() => setIsEditing(false)}
+                    >
+                      <Text style={styles.cancelEditText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Quick Input Bar (For vocal testing / quiet stalls) */}
+          {sessionActive && (
+            <View style={styles.quickInputCard}>
+              <TextInput
+                style={styles.quickTextInput}
+                value={quickInput}
+                onChangeText={setQuickInput}
+                placeholder="Speak/Type phrase (e.g., '4 kilo tamatar 100 rupaye')..."
+                placeholderTextColor="#9CA3AF"
+                onSubmitEditing={() => handleSubmitSpokenPhrase()}
+              />
+              <View style={styles.quickActionButtons}>
                 <TouchableOpacity
-                  style={styles.sendTurnBtn}
-                  onPress={() => handleSendTurn(selectedSpeaker, inputText)}
-                  disabled={loading || !inputText.trim()}
+                  style={[styles.quickSendBtn, !quickInput.trim() && { opacity: 0.5 }]}
+                  disabled={!quickInput.trim() || processingTurn}
+                  onPress={() => handleSubmitSpokenPhrase()}
                 >
-                  {loading ? (
+                  {processingTurn ? (
                     <ActivityIndicator size="small" color="#073B3A" />
                   ) : (
-                    <Ionicons name="arrow-up" size={18} color="#073B3A" />
+                    <>
+                      <Ionicons name="send" size={14} color="#073B3A" />
+                      <Text style={styles.quickSendBtnText}>Send</Text>
+                    </>
                   )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.quickTestLowConfBtn, !quickInput.trim() && { opacity: 0.5 }]}
+                  disabled={!quickInput.trim() || processingTurn}
+                  onPress={() => handleSubmitSpokenPhrase(0.72)}
+                >
+                  <Ionicons name="warning-outline" size={14} color="#D97706" />
+                  <Text style={styles.quickTestLowConfText}>Test &lt;80%</Text>
                 </TouchableOpacity>
               </View>
             </View>
+          )}
 
-            {/* Recent Streamed Turns Log */}
-            <Text style={styles.sectionHeading}>Recent Audio Turn Logs (WAL Buffer)</Text>
-            {history.map(item => (
-              <View key={item.id} style={styles.turnCard}>
-                <View style={styles.turnHeader}>
-                  <View style={[styles.speakerBadge, item.speaker === 'VENDOR' ? styles.badgeVendor : styles.badgeCust]}>
-                    <Text style={styles.speakerBadgeText}>{item.speaker}</Text>
-                  </View>
-                  <Text style={styles.turnTime}>{item.timestamp} • {item.noiseDb} dB</Text>
-                </View>
-                <Text style={styles.turnBodyText}>“{item.text}”</Text>
-                <Text style={styles.turnEvidence}>{item.evidenceId} • {(item.confidence * 100).toFixed(0)}% Confidence</Text>
+          {/* Session Transcripts List */}
+          <View style={styles.listHeaderRow}>
+            <Text style={styles.listHeaderTitle}>Session Transcripts</Text>
+            <Text style={styles.listHeaderCount}>
+              {transcripts.length} {transcripts.length === 1 ? 'Turn' : 'Turns'}
+            </Text>
+          </View>
+
+          <ScrollView style={styles.transcriptsList} contentContainerStyle={{ paddingBottom: 20 }}>
+            {transcripts.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons
+                  name={sessionActive ? 'mic-outline' : 'mic-off-outline'}
+                  size={42}
+                  color="#9CA3AF"
+                />
+                <Text style={styles.emptyTitle}>
+                  {sessionActive ? 'Listening for Customers...' : 'Session Stopped'}
+                </Text>
+                <Text style={styles.emptySubtext}>
+                  {sessionActive
+                    ? 'Spoken orders & Hindi queries will stream here in real time.'
+                    : 'Tap "Start Session" to open audio stream.'}
+                </Text>
               </View>
-            ))}
+            ) : (
+              transcripts.map((t) => {
+                const isVendor = t.speaker === 'VENDOR';
+                const isLowConf = t.confidence < 0.80;
+
+                return (
+                  <View
+                    key={t.id}
+                    style={[
+                      styles.transcriptCard,
+                      isLowConf && !t.confirmed ? styles.transcriptCardAlert : null
+                    ]}
+                  >
+                    <View style={styles.transcriptCardHeader}>
+                      <View style={styles.speakerBadgeRow}>
+                        <View
+                          style={[
+                            styles.speakerPill,
+                            isVendor ? styles.speakerPillVendor : styles.speakerPillCustomer
+                          ]}
+                        >
+                          <Ionicons
+                            name={isVendor ? 'person' : 'people'}
+                            size={12}
+                            color={isVendor ? '#073B3A' : '#1E40AF'}
+                          />
+                          <Text
+                            style={[
+                              styles.speakerPillText,
+                              isVendor ? styles.speakerTextVendor : styles.speakerTextCustomer
+                            ]}
+                          >
+                            {isVendor ? 'VENDOR' : 'CUSTOMER'}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={[
+                            styles.confBadge,
+                            isLowConf ? styles.confBadgeLow : styles.confBadgeHigh
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.confBadgeText,
+                              isLowConf ? styles.confTextLow : styles.confTextHigh
+                            ]}
+                          >
+                            {Math.round(t.confidence * 100)}%
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text style={styles.transcriptTimeText}>{t.timestamp}</Text>
+                    </View>
+
+                    <Text style={styles.transcriptBodyText}>“{t.text}”</Text>
+
+                    <View style={styles.transcriptFooter}>
+                      <View style={styles.footerNoiseRow}>
+                        <Ionicons name="volume-medium-outline" size={13} color="#9CA3AF" />
+                        <Text style={styles.footerNoiseText}>{t.noiseDb} dB</Text>
+                      </View>
+
+                      {t.needsConfirmation && !t.confirmed ? (
+                        <View style={styles.statusPillReview}>
+                          <Text style={styles.statusPillReviewText}>Pending Review</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.statusPillConfirmed}>
+                          <Ionicons name="checkmark-done" size={12} color="#059669" />
+                          <Text style={styles.statusPillConfirmedText}>Confirmed</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                );
+              })
+            )}
           </ScrollView>
         </View>
       </View>
@@ -318,288 +676,443 @@ export const AudioStreamModal: React.FC<Props> = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(7, 59, 58, 0.45)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'flex-end'
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: '90%',
-    paddingBottom: 24,
+    minHeight: '65%',
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 24
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    justifyContent: 'space-between',
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#F3F4F6'
   },
   headerTitleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'center'
   },
-  micIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: '#E2FD52',
-    alignItems: 'center',
-    justifyContent: 'center',
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 10
   },
   modalTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
-    color: '#073B3A',
+    color: '#111827'
   },
   modalSubtitle: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#6B7280',
-    marginTop: 1,
+    marginTop: 2
   },
   closeBtn: {
-    padding: 6,
+    padding: 6
   },
-  scrollBody: {
-    padding: 20,
+
+  /* THE SINGLE BUTTON */
+  singleButtonContainer: {
+    marginVertical: 14,
+    alignItems: 'center'
   },
-  visualizerCard: {
-    backgroundColor: '#073B3A',
-    borderRadius: 22,
-    padding: 18,
-    marginBottom: 14,
-  },
-  visualizerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  streamBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    marginRight: 6,
-  },
-  streamBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.6,
-  },
-  streamToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E2FD52',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-  },
-  streamTogglePause: {
-    backgroundColor: '#E2FD52',
-  },
-  streamToggleStart: {
-    backgroundColor: '#D1D5DB',
-  },
-  streamToggleText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#073B3A',
-  },
-  frequencyBarsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    height: 50,
-    paddingHorizontal: 10,
-    marginVertical: 10,
-  },
-  freqBar: {
-    width: 6,
-    borderRadius: 3,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.15)',
-    paddingTop: 12,
-    marginTop: 6,
-  },
-  metricItem: {
-    alignItems: 'center',
-  },
-  metricLabel: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#9CA3AF',
-    letterSpacing: 0.5,
-  },
-  metricValue: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginTop: 2,
-  },
-  calibratePill: {
+  mainSessionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F1FFE5',
+    width: '100%',
+    paddingVertical: 15,
+    borderRadius: 18,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8
+  },
+  startSessionBtn: {
+    backgroundColor: '#E2FD52',
     borderWidth: 1,
-    borderColor: '#79AF00',
-    paddingVertical: 11,
+    borderColor: '#C6E33B'
+  },
+  endSessionBtn: {
+    backgroundColor: '#DC2626'
+  },
+  mainSessionBtnText: {
+    fontSize: 16,
+    fontWeight: '800'
+  },
+  startSessionBtnText: {
+    color: '#073B3A'
+  },
+  endSessionBtnText: {
+    color: '#FFFFFF'
+  },
+
+  /* CONFIRMATION / MANUAL EDIT CARD */
+  confirmAlertCard: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1.5,
+    borderColor: '#F59E0B',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12
+  },
+  confirmAlertHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8
+  },
+  warningIconCircle: {
+    width: 28,
+    height: 28,
     borderRadius: 14,
-    marginBottom: 18,
+    backgroundColor: '#FDE68A',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
-  calibrateText: {
-    fontSize: 11,
+  confirmAlertTitle: {
+    fontSize: 13,
     fontWeight: '800',
-    color: '#073B3A',
+    color: '#92400E'
   },
-  sectionHeading: {
+  confirmAlertSubtitle: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#6E827D',
-    letterSpacing: 0.6,
-    marginBottom: 10,
-    marginTop: 4,
+    color: '#78350F',
+    marginTop: 1
   },
-  presetButtonsRow: {
+  spokenQuoteBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 10,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: '#FCD34D'
+  },
+  spokenQuoteText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1F2937',
+    fontStyle: 'italic'
+  },
+  confirmActionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
-    gap: 8,
-  },
-  presetBtn: {
-    flex: 1,
-    backgroundColor: '#F8FCF9',
-    borderWidth: 1,
-    borderColor: '#DDECE7',
-    borderRadius: 14,
-    padding: 10,
     alignItems: 'center',
+    marginTop: 6
   },
-  presetSpeaker: {
-    fontSize: 8,
+  confirmBtnPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E2FD52',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 12
+  },
+  confirmBtnPrimaryText: {
+    fontSize: 12,
     fontWeight: '800',
     color: '#073B3A',
-    marginBottom: 3,
-    letterSpacing: 0.5,
+    marginLeft: 6
   },
-  presetText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#374151',
-    textAlign: 'center',
-  },
-  inputContainer: {
-    backgroundColor: '#F8FCF9',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#DDECE7',
-    padding: 12,
-    marginBottom: 18,
-  },
-  speakerSelectorRow: {
+  confirmBtnSecondary: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 10,
-  },
-  speakerPill: {
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#D1D5DB',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12
   },
-  speakerPillActive: {
-    backgroundColor: '#073B3A',
-    borderColor: '#073B3A',
+  confirmBtnSecondaryText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginLeft: 5
   },
-  speakerPillText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#6B7280',
-  },
-  speakerPillTextActive: {
-    color: '#E2FD52',
-  },
-  inputRow: {
+  confirmBtnDiscard: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
+    backgroundColor: '#FEE2E2',
     paddingHorizontal: 12,
     paddingVertical: 9,
+    borderRadius: 12
+  },
+  confirmBtnDiscardText: {
     fontSize: 12,
-    color: '#111827',
+    fontWeight: '700',
+    color: '#DC2626',
+    marginLeft: 4
   },
-  sendTurnBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#E2FD52',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
+
+  /* EDIT SECTION */
+  editSection: {
+    marginTop: 8
   },
-  turnCard: {
+  editLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#78350F',
+    marginBottom: 6
+  },
+  editInput: {
     backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#111827',
+    marginBottom: 8
+  },
+  editActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  saveEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E2FD52',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginRight: 10
+  },
+  saveEditText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#073B3A',
+    marginLeft: 6
+  },
+  cancelEditBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 10
+  },
+  cancelEditText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '600'
+  },
+
+  /* QUICK INPUT BAR */
+  quickInputCard: {
+    backgroundColor: '#F9FAFB',
     borderRadius: 14,
+    padding: 10,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    marginBottom: 12
+  },
+  quickTextInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: '#111827',
+    marginBottom: 8
+  },
+  quickActionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center'
+  },
+  quickSendBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E2FD52',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginLeft: 8
+  },
+  quickSendBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#073B3A',
+    marginLeft: 5
+  },
+  quickTestLowConfBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8
+  },
+  quickTestLowConfText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#92400E',
+    marginLeft: 4
+  },
+
+  /* TRANSCRIPTS LIST */
+  listHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8
+  },
+  listHeaderTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#374151'
+  },
+  listHeaderCount: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280'
+  },
+  transcriptsList: {
+    flex: 1
+  },
+  transcriptCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 14,
     padding: 12,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB'
   },
-  turnHeader: {
+  transcriptCardAlert: {
+    borderColor: '#F59E0B',
+    backgroundColor: '#FFFBEB'
+  },
+  transcriptCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 6
   },
-  speakerBadge: {
-    paddingHorizontal: 7,
+  speakerBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  speakerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 12,
+    marginRight: 8
   },
-  badgeVendor: {
-    backgroundColor: '#F1FFE5',
+  speakerPillVendor: {
+    backgroundColor: '#D1FAE5'
   },
-  badgeCust: {
-    backgroundColor: '#F3F4F6',
+  speakerPillCustomer: {
+    backgroundColor: '#DBEAFE'
   },
-  speakerBadgeText: {
-    fontSize: 8,
+  speakerPillText: {
+    fontSize: 10,
     fontWeight: '800',
-    color: '#073B3A',
+    marginLeft: 4
   },
-  turnTime: {
-    fontSize: 9,
-    color: '#9CA3AF',
+  speakerTextVendor: {
+    color: '#073B3A'
   },
-  turnBodyText: {
-    fontSize: 12,
+  speakerTextCustomer: {
+    color: '#1E40AF'
+  },
+  confBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6
+  },
+  confBadgeHigh: {
+    backgroundColor: '#ECFDF5'
+  },
+  confBadgeLow: {
+    backgroundColor: '#FEF3C7'
+  },
+  confBadgeText: {
+    fontSize: 10,
+    fontWeight: '800'
+  },
+  confTextHigh: {
+    color: '#059669'
+  },
+  confTextLow: {
+    color: '#D97706'
+  },
+  transcriptTimeText: {
+    fontSize: 11,
+    color: '#9CA3AF'
+  },
+  transcriptBodyText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#111827',
+    color: '#1F2937',
+    marginBottom: 6
   },
-  turnEvidence: {
-    fontSize: 8,
-    color: '#6E827D',
+  transcriptFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  footerNoiseRow: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  footerNoiseText: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    marginLeft: 3
+  },
+  statusPillConfirmed: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  statusPillConfirmedText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
+    marginLeft: 3
+  },
+  statusPillReview: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6
+  },
+  statusPillReviewText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#92400E'
+  },
+
+  /* EMPTY STATE */
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 36
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4B5563',
+    marginTop: 8
+  },
+  emptySubtext: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center',
     marginTop: 4,
-    fontFamily: 'monospace',
-  },
+    maxWidth: 240
+  }
 });

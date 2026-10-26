@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,6 +10,8 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 
 interface Props {
   visible: boolean;
@@ -22,6 +24,7 @@ interface Props {
     category: string;
   }) => void;
   loading?: boolean;
+  apiBaseUrl?: string;
 }
 
 const SAMPLE_ORDERS = [
@@ -43,13 +46,18 @@ export const VoiceOrderModal: React.FC<Props> = ({
   onClose,
   onProcessOrder,
   onAddHandwrittenSlip,
-  loading = false
+  loading = false,
+  apiBaseUrl
 }) => {
   const [activeTab, setActiveTab] = useState<'VOICE' | 'HANDWRITTEN'>('VOICE');
 
-  // Voice Feed State
+  // Real Hardware Voice Feed State
   const [spokenText, setSpokenText] = useState('');
-  const [isSimulatingFeed, setIsSimulatingFeed] = useState(false);
+  const [isRecordingMic, setIsRecordingMic] = useState(false);
+  const [recordingLevel, setRecordingLevel] = useState(0);
+  const [realDecibels, setRealDecibels] = useState(45);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const recordingRef = useRef<Audio.Recording | null>(null);
 
   // Handwritten Slip State
   const [slipTitle, setSlipTitle] = useState('');
@@ -65,17 +73,120 @@ export const VoiceOrderModal: React.FC<Props> = ({
     onClose();
   };
 
-  const handleSimulateLiveFeed = async () => {
-    setIsSimulatingFeed(true);
-    // Pick a random realistic street quote
-    const randomSample = SAMPLE_ORDERS[Math.floor(Math.random() * SAMPLE_ORDERS.length)];
-    setSpokenText(randomSample.label);
-    setTimeout(async () => {
-      setIsSimulatingFeed(false);
-      await onProcessOrder(randomSample.label);
-      setSpokenText('');
-      onClose();
-    }, 1200);
+  const startHardwareRecording = async () => {
+    try {
+      const perm = await Audio.requestPermissionsAsync();
+      if (!perm.granted) {
+        alert('Microphone permission is required to record voice orders.');
+        return;
+      }
+
+      // ★ CRITICAL: set allowsRecordingIOS before every prepareToRecordAsync
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS:         true,   // REQUIRED — unlocks mic input
+        playsInSilentModeIOS:       true,
+        staysActiveInBackground:    true,
+        shouldDuckAndroid:          true,
+        playThroughEarpieceAndroid: false
+      });
+
+      const rec = new Audio.Recording();
+      await rec.prepareToRecordAsync({
+        android: {
+          extension: '.m4a',
+          outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+          audioEncoder: Audio.AndroidAudioEncoder.AAC,
+          sampleRate: 44100,
+          numberOfChannels: 1,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: '.m4a',
+          outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+          audioQuality: Audio.IOSAudioQuality.HIGH,
+          sampleRate: 44100,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {
+          mimeType: 'audio/webm',
+          bitsPerSecond: 128000,
+        },
+        isMeteringEnabled: true,
+      });
+
+      rec.setOnRecordingStatusUpdate((status) => {
+        if (status.isRecording && status.metering !== undefined) {
+          const clamped = Math.max(-60, Math.min(0, status.metering));
+          const db = Math.round(42 + ((clamped + 60) / 60) * 48);
+          setRealDecibels(db);
+          setRecordingLevel((clamped + 60) / 60);
+        }
+      });
+
+      await rec.startAsync();
+      recordingRef.current = rec;
+      setIsRecordingMic(true);
+    } catch (err) {
+      console.warn('Failed to start mic:', err);
+    }
+  };
+
+  const stopHardwareRecordingAndProcess = async () => {
+    if (!recordingRef.current) return;
+    setIsRecordingMic(false);
+    setIsTranscribing(true);
+
+    try {
+      const rec = recordingRef.current;
+      recordingRef.current = null;
+      await rec.stopAndUnloadAsync();
+      const uri = rec.getURI();
+
+      if (uri) {
+        const base64Audio = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64
+        });
+        FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+
+        const endpoint = `${apiBaseUrl || 'http://192.168.108.107:4000/api'}/vendor/audio/transcribe`;
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audioBase64: base64Audio,
+            mimeType: 'audio/mp4'
+          })
+        });
+
+        const data = await res.json();
+        if (data && data.ok && data.text) {
+          setSpokenText(data.text);
+          await onProcessOrder(data.text);
+          setSpokenText('');
+          onClose();
+        } else {
+          alert('No words recognized. Please speak clearly near the microphone.');
+        }
+      }
+    } catch (err) {
+      console.warn('Audio transcribe failed:', err);
+    } finally {
+      setIsTranscribing(false);
+      setRecordingLevel(0);
+      setRealDecibels(45);
+    }
+  };
+
+  const handleToggleMic = () => {
+    if (isRecordingMic) {
+      stopHardwareRecordingAndProcess();
+    } else {
+      startHardwareRecording();
+    }
   };
 
   const handleHandwrittenSubmit = () => {
@@ -169,23 +280,23 @@ export const VoiceOrderModal: React.FC<Props> = ({
                 <View style={styles.streamHeroCard}>
                   <View style={styles.streamHeroTop}>
                     <View style={styles.streamStatusBadge}>
-                      <View style={[styles.pulseDot, isSimulatingFeed && styles.pulseDotActive]} />
+                      <View style={[styles.pulseDot, (isRecordingMic || isTranscribing) && styles.pulseDotActive, isRecordingMic && { backgroundColor: '#EF4444' }]} />
                       <Text style={styles.streamStatusText}>
-                        {isSimulatingFeed ? 'STREAM RECORDING ACTIVE' : 'MIC STREAM READY'}
+                        {isRecordingMic ? 'HARDWARE MIC RECORDING' : isTranscribing ? 'TRANSCRIBING SPEECH...' : 'MIC HARDWARE READY'}
                       </Text>
                     </View>
-                    <Text style={styles.streamHzText}>16kHz PCM / Mono</Text>
+                    <Text style={styles.streamHzText}>{isRecordingMic ? `${realDecibels} dB SPL` : 'Hardware Active'}</Text>
                   </View>
 
                   {/* Concentric Microphone Radar Visualizer */}
                   <View style={styles.vocalRadarCenter}>
-                    <View style={[styles.radarOuterRing, isSimulatingFeed && styles.radarOuterRingActive]}>
-                      <View style={[styles.radarInnerRing, isSimulatingFeed && styles.radarInnerRingActive]}>
-                        <View style={styles.radarMicCircle}>
+                    <View style={[styles.radarOuterRing, isRecordingMic && styles.radarOuterRingActive]}>
+                      <View style={[styles.radarInnerRing, isRecordingMic && styles.radarInnerRingActive]}>
+                        <View style={[styles.radarMicCircle, isRecordingMic && { backgroundColor: '#FEE2E2' }]}>
                           <Ionicons
-                            name={isSimulatingFeed ? 'radio' : 'mic'}
+                            name={isRecordingMic ? 'radio' : isTranscribing ? 'sync' : 'mic'}
                             size={34}
-                            color="#073B3A"
+                            color={isRecordingMic ? '#DC2626' : '#073B3A'}
                           />
                         </View>
                       </View>
@@ -193,48 +304,62 @@ export const VoiceOrderModal: React.FC<Props> = ({
                   </View>
 
                   <View style={styles.waveformRow}>
-                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 26 : 14 }]} />
-                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 42 : 24 }]} />
-                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 56 : 38, backgroundColor: '#E2FD52' }]} />
-                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 38 : 22 }]} />
-                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 60 : 44, backgroundColor: '#E2FD52' }]} />
-                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 42 : 32 }]} />
-                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 26 : 18 }]} />
-                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 48 : 28, backgroundColor: '#E2FD52' }]} />
-                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 22 : 16 }]} />
+                    <View style={[styles.waveBar, { height: isRecordingMic ? Math.max(14, recordingLevel * 40) : 14 }]} />
+                    <View style={[styles.waveBar, { height: isRecordingMic ? Math.max(20, recordingLevel * 50) : 24 }]} />
+                    <View style={[styles.waveBar, { height: isRecordingMic ? Math.max(28, recordingLevel * 65) : 38, backgroundColor: isRecordingMic ? '#EF4444' : '#E2FD52' }]} />
+                    <View style={[styles.waveBar, { height: isRecordingMic ? Math.max(16, recordingLevel * 45) : 22 }]} />
+                    <View style={[styles.waveBar, { height: isRecordingMic ? Math.max(30, recordingLevel * 70) : 44, backgroundColor: isRecordingMic ? '#EF4444' : '#E2FD52' }]} />
+                    <View style={[styles.waveBar, { height: isRecordingMic ? Math.max(22, recordingLevel * 55) : 32 }]} />
+                    <View style={[styles.waveBar, { height: isRecordingMic ? Math.max(14, recordingLevel * 38) : 18 }]} />
+                    <View style={[styles.waveBar, { height: isRecordingMic ? Math.max(24, recordingLevel * 60) : 28, backgroundColor: isRecordingMic ? '#EF4444' : '#E2FD52' }]} />
+                    <View style={[styles.waveBar, { height: isRecordingMic ? Math.max(12, recordingLevel * 35) : 16 }]} />
                   </View>
 
                   {/* Real-time Spoken Text Readout / Guidance */}
                   <View style={styles.vocalStatusBox}>
                     <Text style={styles.vocalStatusHeading}>
-                      {isSimulatingFeed
-                        ? 'LISTENING TO STREET SPOKEN TURN...'
-                        : 'READY FOR VOCAL INPUT'}
+                      {isRecordingMic
+                        ? 'LISTENING TO MICROPHONE...'
+                        : isTranscribing
+                        ? 'TRANSCRIBING THROUGH INDIC ENGINE...'
+                        : 'READY FOR REAL HARDWARE VOICE'}
                     </Text>
                     <Text style={styles.vocalStatusSub}>
-                      {isSimulatingFeed
-                        ? (spokenText ? `“${spokenText}”` : 'Capturing stall speech stream...')
-                        : 'Speak naturally in Hindi, Hinglish, or English. Stall background noise is automatically filtered.'}
+                      {isRecordingMic
+                        ? 'Speak your order into the phone mic (e.g. "4kg aloo 80 rupaye"). Tap Stop when done.'
+                        : isTranscribing
+                        ? 'Parsing speech, diarization and financial intent...'
+                        : 'Tap the button below and speak naturally in Hindi, Hinglish, or English.'}
                     </Text>
                   </View>
 
                   {/* Primary Vocal Feed Action Button */}
                   <TouchableOpacity
-                    style={[styles.streamTriggerBtn, isSimulatingFeed && styles.streamTriggerBtnActive]}
-                    onPress={handleSimulateLiveFeed}
-                    disabled={isSimulatingFeed || loading}
+                    style={[
+                      styles.streamTriggerBtn,
+                      isRecordingMic && { backgroundColor: '#FEE2E2', borderColor: '#F87171', borderWidth: 2 }
+                    ]}
+                    onPress={handleToggleMic}
+                    disabled={isTranscribing || loading}
                   >
-                    {isSimulatingFeed || loading ? (
+                    {isTranscribing || loading ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <ActivityIndicator color="#073B3A" size="small" style={{ marginRight: 10 }} />
                         <Text style={styles.streamTriggerBtnText}>
-                          {loading ? 'Posting to Stall Ledger...' : 'Listening to Vocal Feed...'}
+                          {isTranscribing ? 'Transcribing Real Audio...' : 'Posting to Stall Ledger...'}
+                        </Text>
+                      </View>
+                    ) : isRecordingMic ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="stop-circle" size={24} color="#DC2626" style={{ marginRight: 8 }} />
+                        <Text style={[styles.streamTriggerBtnText, { color: '#DC2626' }]}>
+                          Stop &amp; Process Speech
                         </Text>
                       </View>
                     ) : (
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Ionicons name="mic" size={22} color="#073B3A" style={{ marginRight: 8 }} />
-                        <Text style={styles.streamTriggerBtnText}>Capture Live Vocal Turn</Text>
+                        <Text style={styles.streamTriggerBtnText}>Tap to Speak Voice Order</Text>
                       </View>
                     )}
                   </TouchableOpacity>

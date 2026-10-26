@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Constants from 'expo-constants';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 import {
   LogBox,
   StyleSheet,
@@ -8,7 +10,9 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  StatusBar
+  StatusBar,
+  TextInput,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MorningStockModal } from './components/MorningStockModal';
@@ -47,14 +51,14 @@ function getApiBaseUrl(): string {
   const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost;
   if (hostUri) {
     if (hostUri.includes('loca.lt') || hostUri.includes('ngrok') || hostUri.includes('exp.direct')) {
-      return 'http://192.168.105.81:4000/api';
+      return 'http://192.168.108.107:4000/api';
     }
     const ip = hostUri.split(':')[0];
     if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
       return `http://${ip}:4000/api`;
     }
   }
-  return 'http://192.168.105.81:4000/api';
+  return 'http://192.168.108.107:4000/api';
 }
 
 LogBox.ignoreAllLogs();
@@ -240,30 +244,355 @@ export default function App() {
       setProfitLoading(false);
     }
   };
-  // Real-time Daytime Listening & Confidence States
-  const [isListening, setIsListening] = useState(true);
-  const [currentNoiseDb, setCurrentNoiseDb] = useState(64);
+  // Real-time Daytime Listening & Acoustic Perception States (Real Hardware Microphone)
+  const [isListening, setIsListening] = useState(false);
+  const [currentNoiseDb, setCurrentNoiseDb] = useState(42);
+  const [waveformBars, setWaveformBars] = useState<number[]>([8, 12, 6, 14, 10, 8]);
+  const [detectedSpeaker, setDetectedSpeaker] = useState<'VENDOR' | 'CUSTOMER' | 'LISTENING'>('LISTENING');
+  const [liveTranscriptText, setLiveTranscriptText] = useState('');
+  const setLatestHeardDialogue = setLiveTranscriptText;
+  const [liveConfidence, setLiveConfidence] = useState<number | null>(null);
+  const [quickSpeechInput, setQuickSpeechInput] = useState('');
+  const [processingSpeech, setProcessingSpeech] = useState(false);
+  const [isHardwareRecording, setIsHardwareRecording] = useState(false);
 
-  // Dynamic Ambient Street Noise Fluctuation (Real-time Mandi Environment)
-  useEffect(() => {
-    if (!isListening) {
-      setCurrentNoiseDb(0);
-      return;
-    }
-    const interval = setInterval(() => {
-      // Real-world street noise fluctuates between 58 dB and 76 dB
-      const noise = Math.floor(58 + Math.random() * 19);
-      setCurrentNoiseDb(noise);
-    }, 1400);
-    return () => clearInterval(interval);
-  }, [isListening]);
-  const [latestHeardDialogue, setLatestHeardDialogue] = useState('Customer: 1 kilo tamatar do → Stall: ₹30');
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const isListeningRef = useRef(false);
+  const sliceTimerRef = useRef<any>(null);
+  const speechDetectedRef = useRef(false);
+  const isStoppingRef = useRef(false);
+
   const [confirmationPending, setConfirmationPending] = useState<{
     item: string;
     amount: number;
     text: string;
-    confidence?: number;
+    confidence: number;
   } | null>(null);
+
+  // ★ CRITICAL: Must be called before EVERY prepareToRecordAsync.
+  // The OS resets the audio session after each stop, so skipping this on
+  // subsequent chunks silently prevents mic data from flowing in.
+  const applyRecordingAudioMode = async (): Promise<void> => {
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS:         true,   // REQUIRED — this is what actually unlocks the mic
+      playsInSilentModeIOS:       true,
+      staysActiveInBackground:    true,
+      shouldDuckAndroid:          true,
+      playThroughEarpieceAndroid: false
+    });
+  };
+
+  // Metering callback to compute real ambient decibels from microphone hardware
+  const onRecordingStatus = (status: Audio.RecordingStatus) => {
+    if (!status.isRecording) return;
+    const raw = status.metering ?? -60;
+    const clamped = Math.max(-60, Math.min(0, raw));
+    const norm = (clamped + 60) / 60;
+    setCurrentNoiseDb(Math.round(40 + norm * 50));
+    if (norm > 0.20) speechDetectedRef.current = true;
+    setWaveformBars([
+      Math.max(4, Math.round(norm * 28 + 4)),
+      Math.max(6, Math.round(norm * 36 + 6)),
+      Math.max(4, Math.round(norm * 22 + 4)),
+      Math.max(8, Math.round(norm * 42 + 8)),
+      Math.max(5, Math.round(norm * 30 + 5)),
+      Math.max(4, Math.round(norm * 24 + 4))
+    ]);
+  };
+
+  const RECORDING_OPTIONS: Audio.RecordingOptions = {
+    android: {
+      extension: '.m4a',
+      outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+      audioEncoder: Audio.AndroidAudioEncoder.AAC,
+      sampleRate: 16000,
+      numberOfChannels: 1,
+      bitRate: 64000
+    },
+    ios: {
+      extension: '.m4a',
+      outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+      audioQuality: Audio.IOSAudioQuality.MEDIUM,
+      sampleRate: 16000,
+      numberOfChannels: 1,
+      bitRate: 64000,
+      linearPCMBitDepth: 16,
+      linearPCMIsBigEndian: false,
+      linearPCMIsFloat: false
+    },
+    web: { mimeType: 'audio/webm', bitsPerSecond: 64000 },
+    isMeteringEnabled: true
+  };
+
+  const startRecordingChunk = async (): Promise<boolean> => {
+    try {
+      if (recordingRef.current) {
+        try { await recordingRef.current.stopAndUnloadAsync(); } catch {}
+        recordingRef.current = null;
+      }
+
+      // ★ MUST call applyRecordingAudioMode before EVERY prepareToRecordAsync.
+      // Without this the OS silently blocks mic input after the first stop.
+      await applyRecordingAudioMode();
+
+      const rec = new Audio.Recording();
+      await rec.prepareToRecordAsync(RECORDING_OPTIONS);
+      rec.setOnRecordingStatusUpdate(onRecordingStatus);
+      await rec.startAsync();
+      recordingRef.current = rec;
+      setIsHardwareRecording(true);
+      return true;
+    } catch (err: any) {
+      console.warn('[MicPipeline] startRecordingChunk failed:', err?.message || err);
+      setIsHardwareRecording(false);
+      return false;
+    }
+  };
+
+  const processLiveAudioChunk = async (rec: Audio.Recording) => {
+    try {
+      // Gracefully stop — it may or may not still be recording
+      try { await rec.stopAndUnloadAsync(); } catch {}
+      const uri = rec.getURI();
+
+      if (uri) {
+        const base64Audio = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64
+        });
+        FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+
+        // Only send if there's real audio data (not just container headers)
+        if (base64Audio && base64Audio.length > 1000) {
+          await sendAudioToPipeline(base64Audio, 'audio/mp4');
+        }
+      }
+    } catch (err: any) {
+      console.warn('[MicPipeline] processLiveAudioChunk failed:', err?.message || err);
+    }
+  };
+
+  const sendAudioToPipeline = async (audioBase64: string, mimeType: string = 'audio/mp4') => {
+    if (processingSpeech) return;  // don't stack concurrent calls
+    setProcessingSpeech(true);
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/vendor/audio/transcribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioBase64, mimeType })
+      });
+      const data = await res.json();
+      if (data && data.ok && data.text && data.text.trim()) {
+        handlePerceptionTurn(data);
+      }
+    } catch (err: any) {
+      console.warn('[MicPipeline] sendAudioToPipeline failed:', err?.message || err);
+    } finally {
+      setProcessingSpeech(false);
+    }
+  };
+
+  const handlePerceptionTurn = (data: any) => {
+    const text = (data.text || '').trim();
+    if (!text) return;
+
+    const conf = typeof data.confidence === 'number' ? data.confidence : 0.92;
+    const speaker = data.speaker === 'VENDOR' ? 'VENDOR' : 'CUSTOMER';
+    const noise = data.noiseDb || currentNoiseDb;
+
+    setLiveTranscriptText(text);
+    setDetectedSpeaker(speaker);
+    setLiveConfidence(conf);
+    setCurrentNoiseDb(noise);
+
+    // 80% CONFIDENCE GATE: If less than 80% sure, prompt for confirmation or discard!
+    if (conf < 0.80) {
+      const item = data.intent?.item || 'Spoken Order';
+      const amt = Number(data.intent?.amount || 0);
+      setConfirmationPending({
+        item,
+        amount: amt,
+        text,
+        confidence: conf
+      });
+    } else {
+      // Confident (>= 80%): auto-commit sale if amount present
+      if (data.intent?.amount && data.intent.amount > 0) {
+        const amt = Number(data.intent.amount);
+        const newTx: LedgerTransaction = {
+          id: `tx-voice-${Date.now()}`,
+          title: `${data.intent.item || 'Voice Sale'} (+₹${amt})`,
+          category: 'Voice Sale',
+          amount: amt,
+          isCredit: true,
+          time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+        };
+        setTransactions(prev => [newTx, ...prev]);
+        showPrompt({
+          badge: 'Speech Verified',
+          title: `${speaker}: +₹${amt}`,
+          description: `Speech confirmed with ${Math.round(conf * 100)}% confidence (≥ 80%).`,
+          type: 'success',
+          icon: 'mic-outline'
+        });
+      }
+    }
+  };
+
+  // Periodic acoustic cycle: every 4.5 seconds, if voice was detected, slice & transcribe
+  useEffect(() => {
+    if (isListening) {
+      sliceTimerRef.current = setInterval(async () => {
+        if (!isListeningRef.current || isStoppingRef.current) return;
+        if (speechDetectedRef.current && recordingRef.current) {
+          speechDetectedRef.current = false;
+          const currentRec = recordingRef.current;
+          recordingRef.current = null;
+          await startRecordingChunk();
+          processLiveAudioChunk(currentRec);
+        }
+      }, 4500);
+    } else {
+      if (sliceTimerRef.current) {
+        clearInterval(sliceTimerRef.current);
+        sliceTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (sliceTimerRef.current) {
+        clearInterval(sliceTimerRef.current);
+        sliceTimerRef.current = null;
+      }
+    };
+  }, [isListening]);
+
+  const startContinuousListening = async () => {
+    try {
+      const perm = await Audio.requestPermissionsAsync();
+      if (!perm.granted) {
+        showPrompt({
+          badge: 'Mic Permission',
+          title: 'Microphone Permission Needed',
+          description: 'Go to Settings → Cascade and enable Microphone access.',
+          type: 'warning',
+          icon: 'mic-off-outline'
+        });
+        return;
+      }
+
+      isStoppingRef.current     = false;
+      isListeningRef.current    = true;
+      speechDetectedRef.current = false;
+
+      // applyRecordingAudioMode() is called inside startRecordingChunk() below.
+      // Do NOT set isListening(true) before startRecordingChunk succeeds to avoid
+      // triggering the slice timer before we have a valid recording object.
+      const ok = await startRecordingChunk();
+      if (!ok) {
+        isListeningRef.current = false;
+        showPrompt({
+          badge: 'Mic Error',
+          title: 'Could not open microphone',
+          description: 'Ensure no other app is using the mic, then try again.',
+          type: 'warning',
+          icon: 'mic-off-outline'
+        });
+        return;
+      }
+
+      setIsListening(true);  // starts the slice timer useEffect
+
+      showPrompt({
+        badge:       language === 'hi' ? 'स्ट्रीम शुरू हुई' : 'Stream Started',
+        title:       language === 'hi' ? 'माइक सक्रिय है' : 'Microphone Active',
+        description: language === 'hi'
+          ? 'बोलें — Indic Perception Engine सुन रहा है'
+          : 'Speak now — audio is captured and sent to the Indic Perception Engine.',
+        type: 'success',
+        icon: 'mic-outline'
+      });
+    } catch (err: any) {
+      console.warn('[MicPipeline] startContinuousListening error:', err?.message || err);
+    }
+  };
+
+  const stopContinuousListening = async () => {
+    isStoppingRef.current  = true;
+    isListeningRef.current = false;
+    setIsListening(false);
+    setIsHardwareRecording(false);
+
+    if (sliceTimerRef.current) {
+      clearInterval(sliceTimerRef.current);
+      sliceTimerRef.current = null;
+    }
+
+    if (recordingRef.current) {
+      try { await recordingRef.current.stopAndUnloadAsync(); } catch {}
+      recordingRef.current = null;
+    }
+    isStoppingRef.current = false;
+    setCurrentNoiseDb(40);
+    setWaveformBars([4, 4, 4, 4, 4, 4]);
+
+    // Restore playback-only audio mode
+    await Audio.setAudioModeAsync({
+      allowsRecordingIOS:      false,
+      playsInSilentModeIOS:    true,
+      staysActiveInBackground: false,
+      shouldDuckAndroid:       false
+    }).catch(() => {});
+
+    showPrompt({
+      badge:       language === 'hi' ? 'स्ट्रीम रोकी गई' : 'Stream Stopped',
+      title:       language === 'hi' ? 'माइक बंद है' : 'Microphone Off',
+      description: language === 'hi' ? 'माइक रोका गया। फिर शुरू करने के लिए टैप करें।' : 'Tap Start Stream to resume.',
+      type:        'neutral',
+      icon:        'pause-circle-outline'
+    });
+  };
+
+  // Immediate "Send Spoken Turn" trigger
+  const flushCurrentTurnNow = async () => {
+    if (!recordingRef.current || processingSpeech) return;
+    const currentRec = recordingRef.current;
+    recordingRef.current = null;
+    if (isListeningRef.current) {
+      await startRecordingChunk();
+    }
+    await processLiveAudioChunk(currentRec);
+  };
+
+  // Process live spoken speech through text or manual input
+  const processLiveSpeechUtterance = async (rawPhrase: string, forcedConf?: number) => {
+    if (!rawPhrase || !rawPhrase.trim()) return;
+    setProcessingSpeech(true);
+    const textToSend = rawPhrase.trim();
+
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/vendor/audio/transcribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: textToSend,
+          simulatedConf: forcedConf
+        })
+      });
+      const data = await res.json();
+      if (data && data.ok) {
+        handlePerceptionTurn(data);
+      }
+    } catch {
+      handlePerceptionTurn({
+        text: textToSend,
+        speaker: 'CUSTOMER',
+        confidence: forcedConf ?? 0.85,
+        noiseDb: 58
+      });
+    } finally {
+      setProcessingSpeech(false);
+      setQuickSpeechInput('');
+    }
+  };
 
   // Modern Blended Prompt / In-App Notification System
   const [activePrompt, setActivePrompt] = useState<PromptInfo | null>(null);
@@ -530,28 +859,107 @@ export default function App() {
               </View>
               <View style={styles.hudMetricItem}>
                 <Text style={styles.hudLabel}>{t.speaker}</Text>
-                <Text style={styles.hudVal}>{isListening ? t.vendorActive : t.standby}</Text>
+                <Text style={[styles.hudVal, detectedSpeaker === 'CUSTOMER' && { color: '#3B82F6', fontWeight: '800' }, detectedSpeaker === 'VENDOR' && { color: '#10B981', fontWeight: '800' }]}>
+                  {isListening ? (detectedSpeaker === 'LISTENING' ? 'LISTENING...' : detectedSpeaker) : t.standby}
+                </Text>
               </View>
             </View>
 
             <View style={styles.miniFreqWave}>
-              {[14, 22, 10, 26, 18, 12].map((h, i) => (
+              {waveformBars.map((h, i) => (
                 <View key={i} style={[styles.miniBar, { height: isListening ? h : 4 }]} />
               ))}
             </View>
           </View>
 
+          {/* Quick Action: Send Spoken Turn Now */}
           {isListening && (
-            <View style={styles.liveAudioSnippetBar}>
-              <View style={styles.audioWaveGlyph}>
-                <Ionicons name="chatbubble-ellipses-outline" size={13} color="#073B3A" />
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: processingSpeech ? '#FEF3C7' : '#E2FD52',
+                paddingVertical: 7,
+                paddingHorizontal: 12,
+                borderRadius: 10,
+                marginVertical: 6,
+                borderWidth: 1,
+                borderColor: processingSpeech ? '#FDE68A' : '#D9F938'
+              }}
+              onPress={flushCurrentTurnNow}
+              disabled={processingSpeech}
+            >
+              {processingSpeech ? (
+                <>
+                  <ActivityIndicator size="small" color="#073B3A" style={{ marginRight: 6 }} />
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#073B3A' }}>
+                    Transcribing Voice via Indic Engine...
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="radio" size={14} color="#073B3A" style={{ marginRight: 6 }} />
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#073B3A' }}>
+                    Send Spoken Utterance Now
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {/* LIVE RECOGNIZED SPEECH DISPLAY */}
+          {liveTranscriptText ? (
+            <View style={{ backgroundColor: '#F0FDF4', borderRadius: 12, padding: 10, marginVertical: 8, borderWidth: 1, borderColor: '#BBF7D0' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <View style={{ backgroundColor: detectedSpeaker === 'VENDOR' ? '#D1FAE5' : '#DBEAFE', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: detectedSpeaker === 'VENDOR' ? '#073B3A' : '#1E40AF' }}>
+                    {detectedSpeaker}
+                  </Text>
+                </View>
+                {liveConfidence !== null && (
+                  <View style={{ backgroundColor: liveConfidence < 0.80 ? '#FEF3C7' : '#ECFDF5', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: liveConfidence < 0.80 ? '#D97706' : '#059669' }}>
+                      {Math.round(liveConfidence * 100)}% Sure {liveConfidence < 0.80 ? '(< 80% Review)' : '(High)'}
+                    </Text>
+                  </View>
+                )}
               </View>
-              <View style={{ flex: 1, marginLeft: 8 }}>
-                <Text style={styles.audioSnippetLabel}>{t.streamedTurn}</Text>
-                <Text style={styles.audioSnippetText} numberOfLines={1}>
-                  {latestHeardDialogue}
-                </Text>
-              </View>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827' }}>
+                “{liveTranscriptText}”
+              </Text>
+            </View>
+          ) : null}
+
+          {/* INLINE SPEECH / VOICE TEST INPUT */}
+          {isListening && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 12, padding: 6, marginVertical: 8, borderWidth: 1, borderColor: '#E5E7EB' }}>
+              <TextInput
+                style={{ flex: 1, fontSize: 12, color: '#111827', paddingHorizontal: 8, paddingVertical: 4 }}
+                value={quickSpeechInput}
+                onChangeText={setQuickSpeechInput}
+                placeholder="Speak or type phrase (e.g., '4kg aloo 80 rs')..."
+                placeholderTextColor="#9CA3AF"
+                onSubmitEditing={() => processLiveSpeechUtterance(quickSpeechInput)}
+              />
+              <TouchableOpacity
+                style={{ backgroundColor: '#E2FD52', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginLeft: 6, opacity: quickSpeechInput.trim() ? 1 : 0.5 }}
+                disabled={!quickSpeechInput.trim() || processingSpeech}
+                onPress={() => processLiveSpeechUtterance(quickSpeechInput)}
+              >
+                {processingSpeech ? (
+                  <ActivityIndicator size="small" color="#073B3A" />
+                ) : (
+                  <Ionicons name="send" size={13} color="#073B3A" />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, marginLeft: 6, opacity: quickSpeechInput.trim() ? 1 : 0.5 }}
+                disabled={!quickSpeechInput.trim() || processingSpeech}
+                onPress={() => processLiveSpeechUtterance(quickSpeechInput, 0.72)}
+              >
+                <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>Test &lt;80%</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -559,27 +967,11 @@ export default function App() {
           <TouchableOpacity
             style={[styles.streamSingleBtn, isListening ? styles.streamSingleBtnStop : styles.streamSingleBtnStart]}
             onPress={() => {
-              setIsListening(prev => {
-                const nextState = !prev;
-                if (nextState) {
-                  showPrompt({
-                    badge: language === 'hi' ? 'स्ट्रीम शुरू हुई' : 'Stream Started',
-                    title: language === 'hi' ? 'ऑडियो स्ट्रीम सक्रिय है' : 'Acoustic Stream Active',
-                    description: language === 'hi' ? 'बैकग्राउंड में माइक चालू है। POST /audio/turn पर ऑडियो जा रहा है।' : 'Microphone active in background. Streaming to POST /audio/turn.',
-                    type: 'success',
-                    icon: 'mic-outline'
-                  });
-                } else {
-                  showPrompt({
-                    badge: language === 'hi' ? 'स्ट्रीम रोकी गई' : 'Stream Stopped',
-                    title: language === 'hi' ? 'माइक रुका हुआ है' : 'Microphone Paused',
-                    description: language === 'hi' ? 'माइक रोक दिया गया है। फिर से शुरू करने के लिए टैप करें।' : 'Microphone paused. Tap Start to resume.',
-                    type: 'neutral',
-                    icon: 'pause-circle-outline'
-                  });
-                }
-                return nextState;
-              });
+              if (isListening) {
+                stopContinuousListening();
+              } else {
+                startContinuousListening();
+              }
             }}
           >
             <Ionicons
@@ -594,7 +986,7 @@ export default function App() {
           </TouchableOpacity>
         </View>
 
-        {/* DAYTIME FEATURE: 90% STT CONFIRMATION ALERT BANNER */}
+        {/* DAYTIME FEATURE: < 80% STT CONFIRMATION ALERT BANNER */}
         {confirmationPending && (
           <View style={styles.confirmBanner}>
             <View style={styles.confirmHeaderRow}>
@@ -602,7 +994,7 @@ export default function App() {
                 <Ionicons name="ear-outline" size={20} color="#073B3A" />
               </View>
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.confirmTitle}>{t.didYouHearRight}</Text>
+                <Text style={styles.confirmTitle}>Did you hear right? ({Math.round((confirmationPending.confidence || 0.72) * 100)}% &lt; 80% Sure)</Text>
                 <Text style={styles.confirmQuestion}>
                   {language === 'hi'
                     ? `${t.didCustomerAskFor} `
@@ -1056,6 +1448,7 @@ export default function App() {
       <VoiceOrderModal
         visible={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
+        apiBaseUrl={getApiBaseUrl()}
         onProcessOrder={handleProcessVoiceOrder}
         onAddHandwrittenSlip={(slip) => {
           const newTx: Transaction = {

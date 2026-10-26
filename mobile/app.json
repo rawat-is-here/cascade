@@ -12,7 +12,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Swayam requires camera access to scan and OCR wholesale mandi slips."
+        "NSCameraUsageDescription": "Swayam requires camera access to scan and OCR wholesale mandi slips.",
+        "NSMicrophoneUsageDescription": "Swayam requires microphone access to listen to voice orders and customer conversations."
       }
     },
     "android": {
@@ -22,7 +23,8 @@
       },
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "plugins": [
@@ -36,6 +38,12 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow Cascade to access your photos to select wholesale mandi slips."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Swayam to access your microphone to listen to stall orders and ambient voice transactions."
         }
       ]
     ]
