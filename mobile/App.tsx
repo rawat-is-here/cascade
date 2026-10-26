@@ -47,14 +47,14 @@ function getApiBaseUrl(): string {
   const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost;
   if (hostUri) {
     if (hostUri.includes('loca.lt') || hostUri.includes('ngrok') || hostUri.includes('exp.direct')) {
-      return 'https://tame-shoes-change.loca.lt/api';
+      return 'http://192.168.105.81:4000/api';
     }
     const ip = hostUri.split(':')[0];
     if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
       return `http://${ip}:4000/api`;
     }
   }
-  return 'https://tame-shoes-change.loca.lt/api';
+  return 'http://192.168.105.81:4000/api';
 }
 
 LogBox.ignoreAllLogs();
