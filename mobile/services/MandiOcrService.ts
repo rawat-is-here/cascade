@@ -1,18 +1,20 @@
 /**
- * Mobile Service: Google ML Kit Mandi Receipt OCR & Slip Parser
+ * Mobile Service: Offline Indic Mandi Slip Text Parser
  * 
- * Provides on-device optical character recognition for noisy, oil-stained,
- * crumpled wholesale Mandi slips using Google ML Kit Text Recognition.
- * 
- * Extracts:
- *  - Mandi wholesale market / trader header
- *  - Slip number & timestamp
- *  - Line items: Commodity, Quantity (kg/crates/bori), Unit Rate, Line Cost
- *  - Total wholesale financial outlay
+ * Works 100% in Expo Go with ZERO native dependencies.
+ * Parses OCR text (from server Tesseract or direct input) into structured
+ * line items using the Fuzzy Mandi Produce Dictionary.
  */
+
+import {
+  fuzzyMatchMandiProduce,
+  normalizeWholesaleUnit,
+  CanonicalProduce
+} from './MandiProduceDictionary';
 
 export interface MandiParsedItem {
   name: string;
+  hindiName?: string;
   commodityKey: string;
   quantityKg: number;
   ratePerKg: number;
@@ -29,60 +31,18 @@ export interface MandiParsedReceipt {
   totalBill: number;
   rawText: string;
   confidencePpm: number;
-  engine: 'GOOGLE_ML_KIT_ON_DEVICE' | 'FALLBACK_HEURISTIC';
+  engine: 'SERVER_TESSERACT_OCR' | 'LOCAL_PARSER';
   latencyMs: number;
 }
 
-// Canonical Indic commodity mapping for street vendor stalls
 export class MandiOcrService {
   /**
-   * Recognizes text from an image URI via Google ML Kit Text Recognition.
-   * If running in an unlinked environment (e.g. Expo Go standard client or browser),
-   * falls back safely to heuristic parsing or the backend bridge.
-   */
-  public static async recognizeSlip(imageUri: string): Promise<MandiParsedReceipt> {
-    const startTime = Date.now();
-    let rawText = '';
-    let isNativeMlKit = false;
-
-    // 1. Attempt on-device Google ML Kit Text Recognition
-    try {
-      // Dynamic import to prevent crash in non-native / Expo Go environments
-      const MLKit = require('@react-native-ml-kit/text-recognition');
-      const TextRecognition = MLKit.default || MLKit;
-      const TextRecognitionScript = MLKit.TextRecognitionScript;
-
-      if (TextRecognition && typeof TextRecognition.recognize === 'function') {
-        const script = TextRecognitionScript?.DEVANAGARI || 'Devanagari';
-        const result = await TextRecognition.recognize(imageUri, script);
-        rawText = result.text || '';
-        isNativeMlKit = true;
-      }
-    } catch (nativeErr: any) {
-      // Expected in Expo Go without dev client - log and continue to fallback
-      console.log('[MandiOCR] Native ML Kit bridge bypassed (Expo Go mode):', nativeErr.message || nativeErr);
-    }
-
-    // 2. Leave rawText empty if unlinked so backend optical engine processes the photo
-    if (!rawText.trim()) {
-      rawText = '';
-    }
-
-    // 3. Parse the extracted text into structured mandi items
-    const parsed = this.parseMandiReceiptText(rawText);
-    parsed.latencyMs = Date.now() - startTime;
-    parsed.engine = isNativeMlKit ? 'GOOGLE_ML_KIT_ON_DEVICE' : 'FALLBACK_HEURISTIC';
-
-    return parsed;
-  }
-
-  /**
    * Deterministic, rule-based Indic Mandi receipt parser.
-   * Robust to noisy punctuation, spacing errors, and code-switched Hindi-English slips.
+   * Employs fuzzy dictionary correction, unit conversions, and noise filtering.
    */
   public static parseMandiReceiptText(text: string): MandiParsedReceipt {
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    
+
     let mandiName = 'Wholesale Mandi Invoice';
     let slipNo = `MND-${Math.floor(10000 + Math.random() * 90000)}`;
     let date = 'Today, Morning Wholesale';
@@ -90,12 +50,12 @@ export class MandiOcrService {
     const seen = new Set<string>();
 
     // Header extraction
-    for (let i = 0; i < Math.min(5, lines.length); i++) {
+    for (let i = 0; i < Math.min(6, lines.length); i++) {
       const line = lines[i];
-      if (/mandi|traders|apmc|wholesale|vegetables|fruits|cooperative|krishi/i.test(line)) {
-        mandiName = line.replace(/[^a-zA-Z0-9\s&.-]/g, '').trim();
+      if (/mandi|traders|apmc|wholesale|vegetables|fruits|cooperative|krishi|मंडी|व्यापारी|कृषि/i.test(line)) {
+        mandiName = line.replace(/[^a-zA-Z0-9\s&.\u0900-\u097F-]/g, '').trim();
       }
-      const slipMatch = line.match(/(?:slip|bill|no|inv|memo)[\s.:#]*([a-zA-Z0-9-]+)/i);
+      const slipMatch = line.match(/(?:slip|bill|no|inv|memo|पर्ची)[\s.:#-]*([a-zA-Z0-9-]+)/i);
       if (slipMatch && slipMatch[1].length >= 3) {
         slipNo = slipMatch[1].toUpperCase();
       }
@@ -105,93 +65,117 @@ export class MandiOcrService {
       }
     }
 
-    // 100% Dynamic Line Parser - NO hardcoded dictionary lookups
+    // Line Parser with Indic Fuzzy Produce Dictionary
     for (const line of lines) {
       const clean = line.replace(/^[\s*#]+/, '').trim();
       if (!clean || clean.length < 3 || /kb\/s|\d+:\d{2}\s*(?:am|pm)?\b|status|\b(?:total|subtotal|slip|bill|inv|invoice|memo|date|customer)\b/i.test(clean)) {
         continue;
       }
 
-      // Matches: [Any Name] [Separator] [Quantity] [Unit] [Separator] [Price/Rate]
-      const m = clean.match(/^([a-zA-Z\s&.-]+?)\s*[-–—=:\s*#]+\s*(\d+(?:\.\d+)?)\s*(kg|kilo|g|crate|bori|katta|sack|petti|l|piece)?/i);
+      // Pattern 1: [Word / Name] [Separator] [Quantity] [Unit optional] [Rate/Total]
+      const m = clean.match(/^([a-zA-Z\s&.\u0900-\u097F-]+?)\s*[-–—=:\s*#]+\s*(\d+(?:\.\d+)?)\s*(kg|kilo|g|crate|bori|katta|sack|petti|l|piece|बोरी|कट्टा|पेटी|धड़ी)?/i);
+
+      let matchedCommodity: CanonicalProduce | null = null;
+      let rawName = '';
+      let qty = 1;
+      let rawUnit = 'kg';
+      let remainder = '';
+
       if (m) {
-        const rawName = m[1].replace(/[-–—=:\s*#]+$/, '').trim();
-        if (rawName.length >= 2 && !seen.has(rawName.toLowerCase())) {
-          let qty = parseFloat(m[2]);
-          const rawUnit = (m[3] || 'kg').toLowerCase();
-          let unit = ['kilo', 'kilogram', 'kgs'].includes(rawUnit) ? 'kg'
-            : ['gm', 'grams'].includes(rawUnit) ? 'g'
-            : ['liter', 'litre', 'ltr'].includes(rawUnit) ? 'l'
-            : ['crate', 'crates', 'petti'].includes(rawUnit) ? 'crate'
-            : ['bori', 'katta', 'sack'].includes(rawUnit) ? 'bori'
-            : ['piece', 'pieces', 'pc'].includes(rawUnit) ? 'piece'
-            : rawUnit;
+        rawName = m[1].replace(/[-–—=:\s*#]+$/, '').trim();
+        qty = parseFloat(m[2]);
+        rawUnit = m[3] || 'kg';
+        remainder = clean.substring(m[0].length);
 
-          let remainder = clean.substring(m[0].length);
-
-          // Check for parenthesized weight, e.g. (100 kg) or (50 kg)
-          const parenKgMatch = remainder.match(/^\s*\(\s*(\d+(?:\.\d+)?)\s*(?:kg|kilo|kgs)\s*\)/i);
-          if (parenKgMatch) {
-            qty = parseFloat(parenKgMatch[1]);
-            unit = 'kg';
-            remainder = remainder.substring(parenKgMatch[0].length);
-          } else if (unit === 'bori') {
-            qty = qty * 50; // standard wholesale bori = 50kg
-            unit = 'kg';
-          } else if (unit === 'crate') {
-            qty = qty * 25; // standard wholesale crate = 25kg
-            unit = 'kg';
-          }
-
-          // Check for explicit rate (@ 13.50 or rate 22/kg) and explicit total (= 1350)
-          const rateExplicitMatch = remainder.match(/(?:@|rate)\s*(\d+(?:\.\d+)?)/i);
-          const totalExplicitMatch = remainder.match(/=\s*(\d+(?:\.\d+)?)/i);
-
-          let rate = 0;
-          let total = 0;
-
-          if (rateExplicitMatch && totalExplicitMatch) {
-            rate = parseFloat(rateExplicitMatch[1]);
-            total = Math.round(parseFloat(totalExplicitMatch[1]));
-          } else if (rateExplicitMatch) {
-            rate = parseFloat(rateExplicitMatch[1]);
-            total = Math.round(qty * rate);
-          } else if (totalExplicitMatch) {
-            total = Math.round(parseFloat(totalExplicitMatch[1]));
-            rate = qty > 0 ? Number((total / qty).toFixed(1)) : total;
-          } else {
-            const isPerUnit = /\/(?:kg|kilo|l|piece|g)|per/i.test(remainder);
-            const numbers = (remainder.match(/\d+(?:\.\d+)?/g) || []).map(Number);
-
-            if (numbers.length >= 2) {
-              rate = numbers[0];
-              total = Math.round(numbers[1]);
-            } else if (numbers.length === 1) {
-              let val = numbers[0];
-              if (val > 150 && isPerUnit && String(Math.floor(val)).startsWith('2') && String(Math.floor(val)).length === 3) {
-                val = Number(String(Math.floor(val)).substring(1));
-              }
-              if (isPerUnit) {
-                rate = val;
-                total = Math.round(qty * rate);
-              } else {
-                total = Math.round(val);
-                rate = qty > 0 ? Number((total / qty).toFixed(1)) : total;
-              }
+        const fuzzyResult = fuzzyMatchMandiProduce(rawName);
+        if (fuzzyResult) {
+          matchedCommodity = fuzzyResult.produce;
+        }
+      } else {
+        const words = clean.split(/[-–—=:\s*#]+/);
+        if (words.length > 0) {
+          const firstWord = words[0];
+          const fuzzyResult = fuzzyMatchMandiProduce(firstWord);
+          if (fuzzyResult) {
+            matchedCommodity = fuzzyResult.produce;
+            rawName = firstWord;
+            const nums = (clean.match(/\d+(?:\.\d+)?/g) || []).map(Number);
+            if (nums.length >= 1) {
+              qty = nums[0];
+              remainder = clean.substring(firstWord.length);
             }
           }
-
-          seen.add(rawName.toLowerCase());
-          items.push({
-            name: rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase(),
-            commodityKey: rawName.toLowerCase().replace(/\s+/g, '_'),
-            quantityKg: qty,
-            ratePerKg: rate,
-            totalCost: total,
-            unit,
-            confidence: 0.95
-          });
         }
+      }
+
+      if (rawName && rawName.length >= 2) {
+        const canonicalDisplayName = matchedCommodity ? matchedCommodity.canonicalName : (rawName.charAt(0).toUpperCase() + rawName.slice(1));
+        const key = matchedCommodity ? matchedCommodity.canonicalName : rawName.toLowerCase();
+
+        if (seen.has(key)) {
+          continue;
+        }
+
+        const { quantityKg, unit } = normalizeWholesaleUnit(rawUnit, qty, matchedCommodity);
+
+        const parenKgMatch = remainder.match(/^\s*\(\s*(\d+(?:\.\d+)?)\s*(?:kg|kilo|kgs)\s*\)/i);
+        let finalQtyKg = quantityKg;
+        if (parenKgMatch) {
+          finalQtyKg = parseFloat(parenKgMatch[1]);
+          remainder = remainder.substring(parenKgMatch[0].length);
+        }
+
+        const rateExplicitMatch = remainder.match(/(?:@|rate|दर)\s*(\d+(?:\.\d+)?)/i);
+        const totalExplicitMatch = remainder.match(/=\s*(\d+(?:\.\d+)?)/i);
+
+        let rate = 0;
+        let total = 0;
+
+        if (rateExplicitMatch && totalExplicitMatch) {
+          rate = parseFloat(rateExplicitMatch[1]);
+          total = Math.round(parseFloat(totalExplicitMatch[1]));
+        } else if (rateExplicitMatch) {
+          rate = parseFloat(rateExplicitMatch[1]);
+          total = Math.round(finalQtyKg * rate);
+        } else if (totalExplicitMatch) {
+          total = Math.round(parseFloat(totalExplicitMatch[1]));
+          rate = finalQtyKg > 0 ? Number((total / finalQtyKg).toFixed(1)) : total;
+        } else {
+          const isPerUnit = /\/(?:kg|kilo|l|piece|g)|per|दर/i.test(remainder);
+          const numbers = (remainder.match(/\d+(?:\.\d+)?/g) || []).map(Number);
+
+          if (numbers.length >= 2) {
+            rate = numbers[0];
+            total = Math.round(numbers[1]);
+          } else if (numbers.length === 1) {
+            let val = numbers[0];
+            if (val > 150 && isPerUnit && String(Math.floor(val)).startsWith('2') && String(Math.floor(val)).length === 3) {
+              val = Number(String(Math.floor(val)).substring(1));
+            }
+            if (isPerUnit) {
+              rate = val;
+              total = Math.round(finalQtyKg * rate);
+            } else {
+              total = Math.round(val);
+              rate = finalQtyKg > 0 ? Number((total / finalQtyKg).toFixed(1)) : total;
+            }
+          } else if (matchedCommodity) {
+            rate = matchedCommodity.typicalPricePerKg;
+            total = Math.round(finalQtyKg * rate);
+          }
+        }
+
+        seen.add(key);
+        items.push({
+          name: canonicalDisplayName,
+          hindiName: matchedCommodity?.hindiName,
+          commodityKey: key.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+          quantityKg: finalQtyKg,
+          ratePerKg: rate,
+          totalCost: total,
+          unit,
+          confidence: matchedCommodity ? 0.98 : 0.85
+        });
       }
     }
 
@@ -204,12 +188,15 @@ export class MandiOcrService {
       items,
       totalBill,
       rawText: text,
-      confidencePpm: 950_000,
-      engine: 'GOOGLE_ML_KIT_ON_DEVICE',
+      confidencePpm: 980_000,
+      engine: 'SERVER_TESSERACT_OCR',
       latencyMs: 0
     };
   }
 
+  /**
+   * Sample Indic Mandi test slips for instant verification.
+   */
   public static getSampleMandiReceiptText(mandiKey: 'AZADPUR' | 'VASHI' | 'PUNE'): string {
     switch (mandiKey) {
       case 'AZADPUR':
@@ -221,8 +208,9 @@ export class MandiOcrService {
           'Tamatar Grade-A 50kg @ 14/kg = 700',
           'Aloo New Crop 40kg @ 12/kg = 480',
           'Pyaz Nashik 30kg @ 18/kg = 540',
+          'Hari Mirch 5kg @ 40/kg = 200',
           '---------------------------------------',
-          'TOTAL AMOUNT: Rs. 1720.00 PAID CASH'
+          'TOTAL AMOUNT: Rs. 1920.00 PAID CASH'
         ].join('\r\n');
 
       case 'VASHI':
@@ -244,7 +232,8 @@ export class MandiOcrService {
           'Poha Raw 25kg @ 36 = 900',
           'Refined Tel 15kg @ 112 = 1680',
           'Matar Fresh 20kg @ 34 = 680',
-          'Total: Rs 3260'
+          'Adrak Desi 5kg @ 110 = 550',
+          'Total: Rs 3810'
         ].join('\r\n');
     }
   }

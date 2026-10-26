@@ -57,12 +57,41 @@ function getDb() {
  * Mandi Slip Optical Text & Vision Interpreter
  * Extracts commodities, kilograms, rate/kg, and supplier from captured receipt photos.
  */
+const MANDI_PRODUCE_MAP: Record<string, string[]> = {
+  "Aloo (Potato)": ["aloo", "aalu", "alu", "batata", "potato", "al00", "a100", "आलू", "बटाटा"],
+  "Tamatar (Tomato)": ["tamatar", "tamaatar", "tmatar", "tomato", "tmtr", "tamatr", "टमाटर"],
+  "Pyaz / Kanda (Onion)": ["pyaz", "pyaaz", "kanda", "kande", "knda", "onion", "कांदा", "प्याज़"],
+  "Hari Mirch (Green Chili)": ["mirch", "mirchi", "hari mirch", "chili", "मिर्च"],
+  "Adrak (Ginger)": ["adrak", "adrakh", "aale", "ginger", "अदरक"],
+  "Lehsun (Garlic)": ["lehsun", "lahsun", "lasun", "garlic", "लहसुन"],
+  "Dhaniya (Coriander)": ["dhaniya", "dhania", "kothimbir", "coriander", "धनिया"],
+  "Nimbu (Lemon)": ["nimbu", "neebu", "limbu", "lemon", "नींबू"],
+  "Patta Gobhi (Cabbage)": ["gobhi", "gobi", "patta gobhi", "cabbage", "गोभी"],
+  "Gajar (Carrot)": ["gajar", "carrot", "गाजर"],
+  "Matar (Peas)": ["matar", "mutter", "peas", "मटर"],
+  "Paneer (Cottage Cheese)": ["paneer", "panir", "cheese", "पनीर"],
+  "Poha (Flattened Rice)": ["poha", "pohe", "पोहा"],
+  "Refined Tel (Cooking Oil)": ["tel", "oil", "refined", "तेल"]
+};
+
+function matchMandiCommodity(name: string): string {
+  const clean = name.toLowerCase().trim();
+  for (const [canonical, aliases] of Object.entries(MANDI_PRODUCE_MAP)) {
+    for (const a of aliases) {
+      if (clean === a || clean.startsWith(a) || a.startsWith(clean)) {
+        return canonical;
+      }
+    }
+  }
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 function parseMandiSlipText(rawText: string) {
   const lines = (rawText || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
-  let mandiName = "Azadpur Subzi Mandi Wholesale";
+  let mandiName = "Wholesale Mandi Invoice";
   for (const line of lines) {
-    if (/(?:azadpur|ghazipur|keshopur|okhla|mandi|krishi|trader|traders|vyapari|apmc|parishad)/i.test(line)) {
+    if (/(?:azadpur|ghazipur|keshopur|okhla|mandi|krishi|trader|traders|vyapari|apmc|parishad|मंडी|व्यापारी)/i.test(line)) {
       mandiName = line;
       break;
     }
@@ -80,44 +109,57 @@ function parseMandiSlipText(rawText: string) {
   const detectedItems: Array<{ name: string; quantityKg: number; ratePerKg: number; totalCost: number }> = [];
   const seen = new Set<string>();
 
-  // 100% Dynamic Receipt Line Parser - ZERO hardcoded commodity dictionaries
   for (const line of lines) {
     const clean = line.trim();
-    if (!clean || clean.length < 3 || /crop|kb\/s|\d+:\d+|menu|estimate|total|subtotal|cash|slip|bill/i.test(clean)) {
+    if (!clean || clean.length < 3 || /crop|kb\/s|\d+:\d+|menu|estimate|\btotal\b|\bsubtotal\b|\bcash\b|\bslip\b|\bbill\b/i.test(clean)) {
       continue;
     }
 
-    // Matches: [Any Name] [Separator] [Quantity] [Unit] [Separator] [Price/Rate]
-    const m = clean.match(/^([a-zA-Z\s]+?)[-–—=:\s*#]+(\d+(?:\.\d+)?)\s*([a-zA-Z]+)?/i);
+    const m = clean.match(/^([a-zA-Z\u0900-\u097F\s]+?)[-–—=:\s*#]+(\d+(?:\.\d+)?)\s*([a-zA-Z\u0900-\u097F]+)?/i);
     if (m) {
       const rawName = m[1].replace(/[-–—=:\s*#]+$/, '').trim();
-      if (rawName.length >= 2 && !seen.has(rawName.toLowerCase())) {
-        const qty = parseFloat(m[2]);
+      const canonicalName = matchMandiCommodity(rawName);
+
+      if (rawName.length >= 2 && !seen.has(canonicalName.toLowerCase())) {
+        let qty = parseFloat(m[2]);
+        const rawUnit = (m[3] || 'kg').toLowerCase();
+        if (['bori', 'katta', 'sack'].includes(rawUnit)) qty *= 50;
+        else if (['crate', 'crates', 'petti'].includes(rawUnit)) qty *= 25;
+
         const remainder = clean.substring(m[0].length);
-        const isPerUnit = /\/(?:kg|kilo|l|piece|g)|per/i.test(remainder);
-        const numbers = (remainder.match(/\d+(?:\.\d+)?/g) || []).map(Number);
+
+        const rateMatch = remainder.match(/(?:@|rate|दर)\s*(\d+(?:\.\d+)?)/i);
+        const totalMatch = remainder.match(/=\s*(\d+(?:\.\d+)?)/i);
 
         let rate = 0;
         let total = 0;
-        if (numbers.length > 0) {
-          let val = numbers[numbers.length - 1];
-          // Strip currency glyph OCR noise (e.g. "214/kg" where '2' was ₹ -> 14)
-          if (val > 150 && isPerUnit && String(Math.floor(val)).startsWith('2') && String(Math.floor(val)).length === 3) {
-            val = Number(String(Math.floor(val)).substring(1));
-          }
 
-          if (isPerUnit) {
-            rate = val;
-            total = Math.round(qty * rate);
-          } else {
-            total = Math.round(val);
+        if (rateMatch && totalMatch) {
+          rate = parseFloat(rateMatch[1]);
+          total = Math.round(parseFloat(totalMatch[1]));
+        } else if (rateMatch) {
+          rate = parseFloat(rateMatch[1]);
+          total = Math.round(qty * rate);
+        } else if (totalMatch) {
+          total = Math.round(parseFloat(totalMatch[1]));
+          rate = qty > 0 ? Number((total / qty).toFixed(1)) : total;
+        } else {
+          const numbers = (remainder.match(/\d+(?:\.\d+)?/g) || []).map(Number);
+          if (numbers.length >= 2) {
+            rate = numbers[0];
+            total = Math.round(numbers[1]);
+          } else if (numbers.length === 1) {
+            total = Math.round(numbers[0]);
             rate = qty > 0 ? Number((total / qty).toFixed(1)) : total;
+          } else {
+            rate = 20;
+            total = Math.round(qty * rate);
           }
         }
 
-        seen.add(rawName.toLowerCase());
+        seen.add(canonicalName.toLowerCase());
         detectedItems.push({
-          name: rawName.charAt(0).toUpperCase() + rawName.slice(1),
+          name: canonicalName,
           quantityKg: qty,
           ratePerKg: rate,
           totalCost: total
@@ -147,33 +189,26 @@ function parseMandiSlipText(rawText: string) {
 vendorRouter.post("/wholesale/ocr", async (req, res) => {
   try {
     const { imageBase64, rawText } = req.body;
-    let slip: any = null;
+    let combinedText = rawText || "";
 
-    // 1. If imageBase64 is provided, run high-precision RapidOCR ONNX handwriting engine
+    // 1. If base64 photo is provided, run offline Tesseract.js directly on the image buffer!
     if (imageBase64 && typeof imageBase64 === 'string') {
       try {
-        const { execFileSync } = require('child_process');
-        const path = require('path');
-        const scriptPath = path.resolve(__dirname, '../../../services/offline_ocr_service.py');
-        const pythonOut = execFileSync('python', [scriptPath], {
-          input: imageBase64,
-          encoding: 'utf8',
-          maxBuffer: 50 * 1024 * 1024,
-          timeout: 10000
-        });
-        const parsedResult = JSON.parse(pythonOut);
-        if (parsedResult && parsedResult.items && parsedResult.items.length > 0) {
-          slip = parsedResult;
+        const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '').trim();
+        const imgBuffer = Buffer.from(cleanBase64, 'base64');
+        if (imgBuffer.length > 0) {
+          const tesseractResult = await Tesseract.recognize(imgBuffer, 'eng');
+          if (tesseractResult && tesseractResult.data && tesseractResult.data.text) {
+            combinedText = (combinedText ? combinedText + "\n" : "") + tesseractResult.data.text;
+          }
         }
-      } catch (rapidErr: any) {
-        console.warn('[OCR Server] RapidOCR execution fallback:', rapidErr?.message || rapidErr);
+      } catch (tessErr: any) {
+        console.warn('[OCR Server] Tesseract recognition fallback:', tessErr?.message || tessErr);
       }
     }
 
-    // 2. Fallback to rule-based parser if RapidOCR did not return items
-    if (!slip || !slip.items || slip.items.length === 0) {
-      slip = parseMandiSlipText(rawText || "");
-    }
+    // 2. Parse the recognized optical text using the Mandi Produce Map and numeral parser
+    const slip = parseMandiSlipText(combinedText);
 
     // Persist OCR evidence into SQLite WAL database
     const db = getDb();
@@ -919,19 +954,25 @@ vendorRouter.get('/sync/devices', (req, res) => {
     const devices = [
       {
         deviceId: 'DEV_HELPER_01',
-        name: 'Ramesh\'s Phone (Helper)',
-        signal: 'Strong',
-        pendingMergeCount: Math.floor(Math.random() * 5) + 1,
-        lastSyncAt: Date.now() - Math.floor(Math.random() * 3600000),
+        operatorName: 'Ramesh Kumar',
+        role: 'Stall Helper',
+        signalRssi: '-62 dBm',
+        signalStrength: 'Strong',
+        pendingMergeCount: 4,
+        salesTotal: 980,
+        lastSyncAt: Date.now() - 25 * 60 * 1000,
         status: 'NEARBY'
       },
       {
-        deviceId: 'DEV_OWNER_02',
-        name: 'Owner\'s Backup Phone',
-        signal: 'Medium',
-        pendingMergeCount: 0,
-        lastSyncAt: Date.now() - Math.floor(Math.random() * 7200000),
-        status: 'SYNCED'
+        deviceId: 'DEV_HELPER_02',
+        operatorName: 'Suresh Verma',
+        role: 'Evening Cashier',
+        signalRssi: '-76 dBm',
+        signalStrength: 'Medium',
+        pendingMergeCount: 3,
+        salesTotal: 1120,
+        lastSyncAt: Date.now() - 55 * 60 * 1000,
+        status: 'NEARBY'
       }
     ];
     res.json({ ok: true, devices });

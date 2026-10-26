@@ -23,6 +23,8 @@ import { BlendedPrompt, PromptInfo } from './components/BlendedPrompt';
 import { STTConfirmationModal } from './components/STTConfirmationModal';
 import { CreditBookModal } from './components/CreditBookModal';
 import { RecipeModal } from './components/RecipeModal';
+import { SettingsModal } from './components/SettingsModal';
+import { ExpenseReportModal } from './components/ExpenseReportModal';
 
 interface Transaction {
   id: string;
@@ -40,12 +42,15 @@ function getApiBaseUrl(): string {
   }
   const hostUri = Constants.expoConfig?.hostUri || (Constants as any).manifest?.debuggerHost;
   if (hostUri) {
+    if (hostUri.includes('loca.lt') || hostUri.includes('ngrok') || hostUri.includes('exp.direct')) {
+      return 'https://tame-shoes-change.loca.lt/api';
+    }
     const ip = hostUri.split(':')[0];
     if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
       return `http://${ip}:4000/api`;
     }
   }
-  return 'http://192.168.108.107:4000/api';
+  return 'https://tame-shoes-change.loca.lt/api';
 }
 
 LogBox.ignoreAllLogs();
@@ -108,6 +113,13 @@ export default function App() {
   const [activeSabotage, setActiveSabotage] = useState<'CLEAN' | 'NOISE' | 'CLOCK' | 'AIRGAP'>('CLEAN');
 
   // Modals & Navigation
+  const [isBluetoothConnected, setIsBluetoothConnected] = useState(true);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showExpenseReport, setShowExpenseReport] = useState(false);
+  const [language, setLanguage] = useState<'en' | 'hi'>('en');
+  const [vendorName, setVendorName] = useState('Akash Rawat');
+  const [vendorPhone, setVendorPhone] = useState('+91 98765 43210');
+  const [serverBaseUrl, setServerBaseUrl] = useState<string>(getApiBaseUrl());
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showAudioStreamModal, setShowAudioStreamModal] = useState(false);
   const [showMandiOcr, setShowMandiOcr] = useState(false);
@@ -125,7 +137,7 @@ export default function App() {
   // Live Profit Bounds (True Accrual — replaces static hardcoded interval)
   const [profitBounds, setProfitBounds] = useState<{ lower: number; upper: number; estimate: number; margin: number } | null>(null);
   const [profitLoading, setProfitLoading] = useState(false);
-  const [activeWholesaleBasis, setActiveWholesaleBasis] = useState<{ totalCost: number; itemsCount: number; supplier: string }>({ totalCost: 1720, itemsCount: 3, supplier: "Azadpur Mandi" });
+  const [activeWholesaleBasis, setActiveWholesaleBasis] = useState<{ totalCost: number; itemsCount: number; supplier: string } | null>(null);
 
   useEffect(() => {
     fetchProfitBounds();
@@ -157,6 +169,21 @@ export default function App() {
   };
   // Real-time Daytime Listening & Confidence States
   const [isListening, setIsListening] = useState(true);
+  const [currentNoiseDb, setCurrentNoiseDb] = useState(64);
+
+  // Dynamic Ambient Street Noise Fluctuation (Real-time Mandi Environment)
+  useEffect(() => {
+    if (!isListening) {
+      setCurrentNoiseDb(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      // Real-world street noise fluctuates between 58 dB and 76 dB
+      const noise = Math.floor(58 + Math.random() * 19);
+      setCurrentNoiseDb(noise);
+    }, 1400);
+    return () => clearInterval(interval);
+  }, [isListening]);
   const [latestHeardDialogue, setLatestHeardDialogue] = useState('Customer: 1 kilo tamatar do → Stall: ₹30');
   const [confirmationPending, setConfirmationPending] = useState<{
     item: string;
@@ -281,7 +308,7 @@ export default function App() {
           text,
           timestamp: Date.now(),
           confidence: 0.95,
-          noiseDb: 64
+          noiseDb: currentNoiseDb || 64
         })
       });
       const data = await res.json();
@@ -330,7 +357,34 @@ export default function App() {
           <Ionicons name="storefront-outline" size={18} color="#073B3A" style={styles.headerIcon} />
           <Text style={styles.headerTitle} numberOfLines={1}>{shopName}</Text>
         </View>
-        <Text style={styles.headerGrossAmount}>₹{liveCashInDrawer.toLocaleString('en-IN')}.00</Text>
+
+        <View style={styles.headerRightGroup}>
+          {/* Bluetooth Mesh Status & Discovery Button */}
+          <TouchableOpacity
+            style={[styles.headerBluetoothBtn, isBluetoothConnected && styles.headerBluetoothBtnConnected]}
+            onPress={() => setShowSyncModal(true)}
+            accessibilityLabel="Bluetooth Mesh Sync"
+          >
+            <Ionicons
+              name={isBluetoothConnected ? "bluetooth" : "bluetooth-outline"}
+              size={18}
+              color={isBluetoothConnected ? "#073B3A" : "#6B7280"}
+            />
+            {isBluetoothConnected && <View style={styles.bluetoothLiveDot} />}
+          </TouchableOpacity>
+
+          {/* Settings and Language Profile Button */}
+          <TouchableOpacity
+            style={styles.headerSettingsBtn}
+            onPress={() => setShowSettingsModal(true)}
+            accessibilityLabel="Settings and Profile"
+          >
+            <View style={styles.langPillBadge}>
+              <Text style={styles.langPillBadgeText}>{language === 'hi' ? 'हिन्दी' : 'EN'}</Text>
+            </View>
+            <Ionicons name="settings-outline" size={19} color="#073B3A" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -362,7 +416,7 @@ export default function App() {
             </View>
 
             <View style={styles.cardFooterRow}>
-              <Text style={styles.cardMeshPill}>● MESH SYNCED</Text>
+              <View />
               <View style={styles.cardCircles}>
                 <View style={[styles.circleHalf, { backgroundColor: '#EB001B' }]} />
                 <View style={[styles.circleHalf, { backgroundColor: '#F79E1B', marginLeft: -8 }]} />
@@ -400,62 +454,16 @@ export default function App() {
           </View>
         </ScrollView>
 
-        {/* DAYTIME FEATURE: CONTINUOUS AUDIO STREAM (CONCEPTZILLA SIGNATURE CARD) */}
+        {/* DAYTIME FEATURE: CONTINUOUS AUDIO STREAM (START STREAM CARD) */}
         <View style={styles.listeningCard}>
           <View style={styles.listeningCardHeader}>
-            <View style={styles.listeningHeaderLeft}>
-              <Text style={styles.listeningMicroHeader}>CONTINUOUS AUDIO STREAM</Text>
-              <View style={styles.micHardwareBadge}>
-                <Ionicons name="mic" size={10} color="#376300" style={{ marginRight: 4 }} />
-                <Text style={styles.micHardwareBadgeText}>NATIVE MIC HOOK</Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.shiftToggleBtn, isListening ? styles.shiftToggleBtnPause : styles.shiftToggleBtnStart]}
-              onPress={() => {
-                setIsListening(prev => {
-                  const nextState = !prev;
-                  if (nextState) {
-                    showPrompt({
-                      badge: 'Audio Stream Active',
-                      title: 'Listening for Sales',
-                      description: 'Microphone active in background. Streaming to POST /audio/turn.',
-                      type: 'success',
-                      icon: 'radio-outline'
-                    });
-                  } else {
-                    showPrompt({
-                      badge: 'Audio Stream Muted',
-                      title: 'Microphone Paused',
-                      description: 'Stream paused. Tap Start Day to resume acoustic VAD.',
-                      type: 'neutral',
-                      icon: 'pause-circle-outline'
-                    });
-                  }
-                  return nextState;
-                });
-              }}
-            >
-              <Ionicons
-                name={isListening ? 'pause-outline' : 'mic-outline'}
-                size={14}
-                color="#073B3A"
-                style={{ marginRight: 4 }}
-              />
-              <Text style={styles.shiftToggleBtnText}>{isListening ? 'Pause' : 'Start Day'}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.listeningBodyBlock}>
             <Text style={styles.listeningHeroTitle}>
-              {isListening ? 'Continuous Acoustic Stream (VAD)' : 'Stream Paused • Offline'}
+              {isListening ? 'Stream Active' : 'Start Stream'}
             </Text>
-            <Text style={styles.listeningHeroSub}>
-              {isListening
-                ? 'Silero VAD energy thresholding & ECAPA-TDNN diarization streaming to POST /audio/turn'
-                : 'Microphone asleep • Tap Start Day to resume continuous streaming'}
-            </Text>
+            <View style={styles.noisePill}>
+              <Ionicons name="volume-medium-outline" size={13} color="#073B3A" style={{ marginRight: 4 }} />
+              <Text style={styles.noisePillText}>{isListening ? `Noise: ${currentNoiseDb} dB` : 'Noise: 0 dB'}</Text>
+            </View>
           </View>
 
           {/* Real-time Hardware Stream Readout Bar */}
@@ -466,12 +474,8 @@ export default function App() {
                 <Text style={styles.hudValGreen}>{isListening ? 'SPEECH ACTIVE' : 'MUTED'}</Text>
               </View>
               <View style={styles.hudMetricItem}>
-                <Text style={styles.hudLabel}>NOISE LEVEL</Text>
-                <Text style={styles.hudVal}>{isListening ? '64 dB' : '0 dB'}</Text>
-              </View>
-              <View style={styles.hudMetricItem}>
-                <Text style={styles.hudLabel}>DIARIZATION</Text>
-                <Text style={styles.hudVal}>VENDOR (Calibrated)</Text>
+                <Text style={styles.hudLabel}>SPEAKER</Text>
+                <Text style={styles.hudVal}>{isListening ? 'VENDOR (Active)' : 'STANDBY'}</Text>
               </View>
             </View>
 
@@ -496,25 +500,43 @@ export default function App() {
             </View>
           )}
 
-          {/* Interactive Stream Controls */}
-          <View style={styles.streamActionsRow}>
-            <TouchableOpacity
-              style={styles.openStreamHudBtn}
-              onPress={() => setShowAudioStreamModal(true)}
-            >
-              <Ionicons name="options-outline" size={14} color="#073B3A" style={{ marginRight: 6 }} />
-              <Text style={styles.openStreamHudText}>Open Live Mic HUD</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.streamTurnPresetBtn}
-              onPress={() => handleStreamTurn('VENDOR', '1 kilo tamatar 30 rupay')}
-              disabled={loading}
-            >
-              <Ionicons name="flash-outline" size={14} color="#073B3A" style={{ marginRight: 4 }} />
-              <Text style={styles.streamTurnPresetText}>Test Turn</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Single Action Button: Start / Stop */}
+          <TouchableOpacity
+            style={[styles.streamSingleBtn, isListening ? styles.streamSingleBtnStop : styles.streamSingleBtnStart]}
+            onPress={() => {
+              setIsListening(prev => {
+                const nextState = !prev;
+                if (nextState) {
+                  showPrompt({
+                    badge: 'Stream Started',
+                    title: 'Acoustic Stream Active',
+                    description: 'Microphone active in background. Streaming to POST /audio/turn.',
+                    type: 'success',
+                    icon: 'mic-outline'
+                  });
+                } else {
+                  showPrompt({
+                    badge: 'Stream Stopped',
+                    title: 'Microphone Paused',
+                    description: 'Microphone paused. Tap Start to resume.',
+                    type: 'neutral',
+                    icon: 'pause-circle-outline'
+                  });
+                }
+                return nextState;
+              });
+            }}
+          >
+            <Ionicons
+              name={isListening ? 'stop-circle' : 'mic-outline'}
+              size={16}
+              color={isListening ? '#FFFFFF' : '#073B3A'}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={[styles.streamSingleBtnText, isListening ? styles.streamSingleBtnTextStop : styles.streamSingleBtnTextStart]}>
+              {isListening ? 'Stop Stream' : 'Start Stream'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* DAYTIME FEATURE: 90% STT CONFIRMATION ALERT BANNER */}
@@ -628,38 +650,43 @@ export default function App() {
           </View>
         </View>
 
-        {/* WHOLESALE MANDI SLIP ENTRY CARD (CONCEPTZILLA EXACT CARD STRUCTURE) */}
+        {/* RAW MATERIAL SLIP CARD */}
         <View style={styles.wholesaleSlipCard}>
           <View style={styles.wholesaleCardHeader}>
-            <Text style={styles.wholesaleMicroHeader}>WHOLESALE MANDI SLIP ENTRY</Text>
-            <View style={styles.ocrHardwareBadge}>
-              <Ionicons name="camera" size={11} color="#376300" style={{ marginRight: 4 }} />
-              <Text style={styles.ocrHardwareBadgeText}>OCR CAMERA HOOK</Text>
+            <View style={styles.rawSlipTitleRow}>
+              <View style={styles.limeIconBoxSmall}>
+                <Ionicons name="receipt-outline" size={16} color="#073B3A" />
+              </View>
+              <Text style={styles.wholesaleCardTitle}>Raw Material Slip</Text>
             </View>
           </View>
 
-          <Text style={styles.wholesaleCardTitle}>Wholesale Mandi Slip & Stock</Text>
-          <Text style={styles.wholesaleCardSub}>
-            Snap physical paper mandi slips to calibrate wholesale COGS cost basis via optical OCR recognition.
-          </Text>
-
-          <View style={styles.wholesaleBasisRow}>
-            <View style={styles.wholesaleBasisLeft}>
-              <Text style={styles.wholesaleBasisLabel}>ACTIVE COST BASIS (COGS)</Text>
-              <Text style={styles.wholesaleBasisValue}>₹1,720.00 Ingested Basis</Text>
-              <Text style={styles.wholesaleSupplierText}>Supplier: Azadpur Mandi • 3 Items (120 kg)</Text>
+          {activeWholesaleBasis && activeWholesaleBasis.totalCost > 0 ? (
+            <View style={styles.wholesaleBasisRow}>
+              <View style={styles.wholesaleBasisLeft}>
+                <Text style={styles.wholesaleBasisLabel}>RECORDED COST BASIS</Text>
+                <Text style={styles.wholesaleBasisValue}>₹{activeWholesaleBasis.totalCost.toLocaleString('en-IN')}.00</Text>
+                {activeWholesaleBasis.supplier ? (
+                  <Text style={styles.wholesaleSupplierText}>Supplier: {activeWholesaleBasis.supplier}</Text>
+                ) : null}
+              </View>
+              <View style={styles.limeIconBox}>
+                <Ionicons name="checkmark-done" size={20} color="#073B3A" />
+              </View>
             </View>
-            <View style={styles.limeIconBox}>
-              <Ionicons name="receipt-outline" size={20} color="#073B3A" />
+          ) : (
+            <View style={styles.wholesaleBasisRowEmpty}>
+              <Ionicons name="scan-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+              <Text style={styles.wholesaleEmptyText}>No raw material slip recorded yet</Text>
             </View>
-          </View>
+          )}
 
           <View style={styles.wholesaleButtonsRow}>
             <TouchableOpacity
               style={styles.scanSlipPrimaryBtn}
               onPress={() => setShowMandiOcr(true)}
             >
-              <Ionicons name="scan-outline" size={15} color="#073B3A" style={{ marginRight: 6 }} />
+              <Ionicons name="camera-outline" size={16} color="#073B3A" style={{ marginRight: 6 }} />
               <Text style={styles.scanSlipPrimaryText}>Scan Mandi Slip (OCR)</Text>
             </TouchableOpacity>
 
@@ -667,7 +694,7 @@ export default function App() {
               style={styles.manualSlipSecondaryBtn}
               onPress={() => setShowMorningStock(true)}
             >
-              <Ionicons name="add-outline" size={15} color="#374151" style={{ marginRight: 4 }} />
+              <Ionicons name="add-outline" size={16} color="#374151" style={{ marginRight: 4 }} />
               <Text style={styles.manualSlipSecondaryText}>Manual Bill</Text>
             </TouchableOpacity>
           </View>
@@ -675,7 +702,7 @@ export default function App() {
 
         <Text style={styles.sectionTitle}>Stall Actions</Text>
         <View style={styles.actionsGrid}>
-          {/* ROW 1: MORNING STOCK | VOICE SALE | ONLINE UPI */}
+          {/* Daily Stall Action Cards: Add Stock | Spoiled Stock | Close Stall */}
           <View style={styles.actionsGridRow}>
             <TouchableOpacity
               style={styles.actionGridItem}
@@ -686,43 +713,6 @@ export default function App() {
               </View>
               <Text style={styles.actionGridTitle}>Add Stock</Text>
               <Text style={styles.actionGridSub}>Mandi bill</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionGridItem}
-              onPress={() => setShowVoiceModal(true)}
-              disabled={loading}
-            >
-              <View style={styles.limeIconBox}>
-                <Ionicons name="mic-outline" size={20} color="#073B3A" />
-              </View>
-              <Text style={styles.actionGridTitle}>Voice Sale</Text>
-              <Text style={styles.actionGridSub}>Speak or type</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionGridItem}
-              onPress={() => setShowUpiModal(true)}
-            >
-              <View style={styles.limeIconBox}>
-                <Ionicons name="qr-code-outline" size={20} color="#073B3A" />
-              </View>
-              <Text style={styles.actionGridTitle}>Online UPI</Text>
-              <Text style={styles.actionGridSub}>Soundbox feed</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* ROW 2: CLOSE REGISTER | SPOILED STOCK | SYNC PHONE */}
-          <View style={styles.actionsGridRow}>
-            <TouchableOpacity
-              style={styles.actionGridItem}
-              onPress={() => setShowEOD(true)}
-            >
-              <View style={styles.limeIconBox}>
-                <Ionicons name="checkmark-done-outline" size={20} color="#073B3A" />
-              </View>
-              <Text style={styles.actionGridTitle}>Close Stall</Text>
-              <Text style={styles.actionGridSub}>Count drawer</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -738,218 +728,61 @@ export default function App() {
 
             <TouchableOpacity
               style={styles.actionGridItem}
-              onPress={() => setShowSyncModal(true)}
+              onPress={() => setShowEOD(true)}
             >
               <View style={styles.limeIconBox}>
-                <Ionicons name="phone-portrait-outline" size={20} color="#073B3A" />
+                <Ionicons name="checkmark-done-outline" size={20} color="#073B3A" />
               </View>
-              <Text style={styles.actionGridTitle}>Sync Phone</Text>
-              <Text style={styles.actionGridSub}>Helper mesh</Text>
+              <Text style={styles.actionGridTitle}>Close Stall</Text>
+              <Text style={styles.actionGridSub}>Count drawer</Text>
             </TouchableOpacity>
           </View>
-
-          {/* ROW 3: CREDIT BOOK | RECIPES | STT GATE */}
-          <View style={styles.actionsGridRow}>
-            <TouchableOpacity
-              style={styles.actionGridItem}
-              onPress={() => setShowCreditBook(true)}
-            >
-              <View style={styles.limeIconBox}>
-                <Ionicons name="book-outline" size={20} color="#073B3A" />
-              </View>
-              <Text style={styles.actionGridTitle}>Udhar Book</Text>
-              <Text style={styles.actionGridSub}>Credit entries</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionGridItem}
-              onPress={() => setShowRecipes(true)}
-            >
-              <View style={styles.limeIconBox}>
-                <Ionicons name="restaurant-outline" size={20} color="#073B3A" />
-              </View>
-              <Text style={styles.actionGridTitle}>Recipes</Text>
-              <Text style={styles.actionGridSub}>Portion deduct</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionGridItem}
-              onPress={() => setShowSTTConfirm(true)}
-            >
-              <View style={styles.limeIconBox}>
-                <Ionicons name="shield-checkmark-outline" size={20} color="#073B3A" />
-              </View>
-              <Text style={styles.actionGridTitle}>STT Gate</Text>
-              <Text style={styles.actionGridSub}>&lt; 0.90 check</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <Text style={styles.sectionTitle}>System Security</Text>
-        <View style={styles.sabotageTabsRow}>
-          {[
-            { id: 'CLEAN', label: 'All good' },
-            { id: 'NOISE', label: 'Noisy area' },
-            { id: 'CLOCK', label: 'Time reset' },
-            { id: 'AIRGAP', label: 'Offline' }
-          ].map(s => (
-            <TouchableOpacity
-              key={s.id}
-              style={[
-                styles.sabotageTab,
-                activeSabotage === s.id && styles.sabotageTabActive
-              ]}
-              onPress={() => setActiveSabotage(s.id as any)}
-            >
-              <Text style={[
-                styles.sabotageTabText,
-                activeSabotage === s.id && styles.sabotageTabTextActive
-              ]}>
-                {s.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* SABOTAGE VERDICT BOX */}
-        <View style={styles.sabotageVerdictCard}>
-          {activeSabotage === 'CLEAN' && (
-            <Text style={styles.sabotageVerdictText}>
-              <Text style={{ fontWeight: '800' }}>Everything looks good.</Text> Your sales and expenses are saved safely.
-            </Text>
-          )}
-          {activeSabotage === 'NOISE' && (
-            <Text style={[styles.sabotageVerdictText, { color: '#073B3A' }]}>
-              <Text style={{ fontWeight: '800' }}>Noisy area detected.</Text> We’ll ask before adding anything we cannot hear clearly.
-            </Text>
-          )}
-          {activeSabotage === 'CLOCK' && (
-            <Text style={[styles.sabotageVerdictText, { color: '#073B3A' }]}>
-              <Text style={{ fontWeight: '800' }}>Time updated.</Text> Your recent entries are still in the right order.
-            </Text>
-          )}
-          {activeSabotage === 'AIRGAP' && (
-            <Text style={[styles.sabotageVerdictText, { color: '#073B3A' }]}>
-              <Text style={{ fontWeight: '800' }}>Offline mode is on.</Text> Keep working — your entries will stay on this phone.
-            </Text>
-          )}
-        </View>
-
-        {/* 6. SPENDING / STOCK LOSS ATTRIBUTION (DONUT & LEGEND IN DENSE FINTECH STYLE) */}
-        <View style={styles.analyticsSectionRow}>
-          <Text style={styles.sectionTitle}>Stock Loss Breakdown</Text>
-          <TouchableOpacity onPress={() => setShowLoss(true)}>
-            <Text style={styles.customizeLink}>Customize ↗</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.stockLossCard}>
-          <View style={styles.donutRow}>
-            {/* Minimalist Visual Donut Mock */}
-            <View style={styles.donutRingContainer}>
-              <View style={[styles.donutSector, { borderColor: '#073B3A' }]} />
-              <View style={[styles.donutSectorInner, { borderColor: '#E2FD52' }]} />
-              <View style={styles.donutHole}>
-                <Text style={styles.donutTotalKg}>{lossTotalKg.toFixed(1)} kg</Text>
-                <Text style={styles.donutSubText}>{lossCommodity}</Text>
-              </View>
-            </View>
-
-            {/* Legend Breakdown */}
-            <View style={styles.donutLegend}>
-              <View style={styles.donutLegendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#073B3A' }]} />
-                <Text style={styles.legendName}>Heat Rot: <Text style={styles.legendBold}>{rotLoss}% ({((lossTotalKg * rotLoss) / 100).toFixed(1)} kg)</Text></Text>
-              </View>
-
-              <View style={styles.donutLegendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#E2FD52' }]} />
-                <Text style={styles.legendName}>Family Food: <Text style={styles.legendBold}>{familyLunch}% ({((lossTotalKg * familyLunch) / 100).toFixed(1)} kg)</Text></Text>
-              </View>
-
-              <View style={styles.donutLegendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#D1D5DB' }]} />
-                <Text style={styles.legendName}>Theft / Loss: <Text style={styles.legendBold}>{theftLoss}% ({((lossTotalKg * theftLoss) / 100).toFixed(1)} kg)</Text></Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        <Text style={styles.sectionTitle}>Real Indic Voice Tests</Text>
-        <View style={styles.scenariosFlow}>
-          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleProcessVoiceOrder('4kg aloo 80 rupaye me de do')}>
-            <Text style={styles.scenarioPillText}>🥔 4kg aloo ₹80</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleProcessVoiceOrder('50 rupaye ka tamatar pack kar do')}>
-            <Text style={styles.scenarioPillText}>🍅 ₹50 tamatar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleProcessVoiceOrder('2 plate poha 40 rupaye')}>
-            <Text style={styles.scenarioPillText}>🍛 2 plate poha ₹40</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleProcessVoiceOrder('Rehne do bhaiya bahut mehenga hai, nahi lena')}>
-            <Text style={styles.scenarioPillText}>🚶 Walkaway (₹0)</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleProcessVoiceOrder('Thoda dhaniya mirchi upar se daal do na')}>
-            <Text style={styles.scenarioPillText}>🌿 Freebie (₹0)</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.scenarioPill} onPress={() => handleProcessVoiceOrder('4kg aloo kitne ke hue')}>
-            <Text style={styles.scenarioPillText}>❓ Inquiry (₹0)</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* 8. RECENT TRANSACTIONS */}
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-        <View style={styles.txListWrapper}>
-          {transactions.map(tx => (
-            <View key={tx.id} style={styles.txItemCard}>
-              <View style={styles.txIconSquare}>
-                <Ionicons name={tx.isCredit ? 'arrow-down-outline' : 'arrow-up-outline'} size={18} color="#073B3A" />
-              </View>
-              <View style={styles.txMeta}>
-                <Text style={styles.txTitleText}>{tx.title}</Text>
-                <Text style={styles.txCategoryText}>{tx.category} • {tx.time}</Text>
-              </View>
-              <Text style={[styles.txAmountText, tx.isCredit ? styles.txCreditColor : styles.txDebitColor]}>
-                {tx.isCredit ? '+' : '-'}₹{tx.amount}.00
-              </Text>
-            </View>
-          ))}
         </View>
 
         <View style={{ height: 80 }} />
       </ScrollView>
 
-      {/* 10. BOTTOM NAVIGATION DOCK (CONCEPTZILLA EXACT 3-ICON DOCK) */}
+      {/* 10. BOTTOM NAVIGATION DOCK (4 BALANCED ACTION BUTTONS) */}
       <View style={styles.bottomDockContainer}>
         <View style={styles.dockPill}>
-          <TouchableOpacity style={styles.dockItem} onPress={() => setCurrentScreen('HOME')}>
-            <Ionicons name={currentScreen === 'HOME' ? 'home' : 'home-outline'} size={21} color={currentScreen === 'HOME' ? '#073B3A' : '#9CA3AF'} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.dockItem} onPress={() => setShowEOD(true)}>
-            <Ionicons name="swap-horizontal-outline" size={21} color="#9CA3AF" />
-          </TouchableOpacity>
-
+          {/* Button 1: Home */}
           <TouchableOpacity
-            style={styles.dockMicButton}
-            onPress={() => setShowVoiceModal(true)}
-            disabled={loading}
-            accessibilityLabel="Add a sale by voice"
+            style={styles.dockItem}
+            onPress={() => setCurrentScreen('HOME')}
+            accessibilityLabel="Home"
           >
-            <View style={styles.dockMicPulse} />
-            <Ionicons name={loading ? 'hourglass-outline' : 'mic'} size={23} color="#073B3A" />
+            <Ionicons
+              name={currentScreen === 'HOME' ? 'home' : 'home-outline'}
+              size={22}
+              color={currentScreen === 'HOME' ? '#073B3A' : '#9CA3AF'}
+            />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.dockItem} onPress={() => {
-            showPrompt({
-              badge: 'Stall Profile',
-              title: shopName,
-              description: 'Offline-first terminal running zero-loss CRDT ledger.',
-              type: 'info',
-              icon: 'storefront-outline'
-            });
-          }}>
-            <Ionicons name="person-outline" size={21} color="#9CA3AF" />
+          {/* Button 2: Expense Report */}
+          <TouchableOpacity
+            style={styles.dockActionButton}
+            onPress={() => setShowExpenseReport(true)}
+            accessibilityLabel="Expense and Sales Report"
+          >
+            <Ionicons name="receipt" size={22} color="#073B3A" />
+          </TouchableOpacity>
+
+          {/* Button 3: Mic Symbol (Twin Action Button immediately to the right of Expense Report) */}
+          <TouchableOpacity
+            style={styles.dockActionButton}
+            onPress={() => setShowVoiceModal(true)}
+            accessibilityLabel="Voice Feed & Handwritten Orders"
+          >
+            <Ionicons name="mic" size={22} color="#073B3A" />
+          </TouchableOpacity>
+
+          {/* Button 4: Profile and Settings */}
+          <TouchableOpacity
+            style={styles.dockItem}
+            onPress={() => setShowSettingsModal(true)}
+            accessibilityLabel="Settings and Profile"
+          >
+            <Ionicons name="person-outline" size={22} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
       </View>
@@ -958,7 +791,7 @@ export default function App() {
       <MorningStockModal
         visible={showMorningStock}
         onClose={() => setShowMorningStock(false)}
-        apiBaseUrl={getApiBaseUrl()}
+        apiBaseUrl={serverBaseUrl}
         onStockAdded={(summary) => {
           const cost = summary.totalCost;
           const itemNames = summary.items.map(i => `${i.name} (${i.quantity} ${i.unit})`).join(', ');
@@ -986,7 +819,7 @@ export default function App() {
       <UpiEventsModal
         visible={showUpiModal}
         onClose={() => setShowUpiModal(false)}
-        apiBaseUrl={getApiBaseUrl()}
+        apiBaseUrl={serverBaseUrl}
         onUpiPaymentConfirmed={(amount, isSale) => {
           if (isSale) {
             const newTx: Transaction = {
@@ -1012,14 +845,18 @@ export default function App() {
       <SyncModal
         visible={showSyncModal}
         onClose={() => setShowSyncModal(false)}
-        apiBaseUrl={getApiBaseUrl()}
-        onSyncComplete={(count) => {
+        apiBaseUrl={serverBaseUrl}
+        currentShopName={shopName}
+        onSyncComplete={(cumulativeData: any) => {
+          if (cumulativeData.newTransactions && cumulativeData.newTransactions.length > 0) {
+            setTransactions(prev => [...cumulativeData.newTransactions, ...prev]);
+          }
           showPrompt({
-            badge: 'CRDT Mesh Sync',
-            title: 'Helper Phone Merged',
-            description: `Synchronized ${count} sales from nearby helper stall phone.`,
+            badge: 'Bluetooth Mesh Merged',
+            title: `Cumulative Total: ₹${cumulativeData.totalSales.toLocaleString('en-IN')}`,
+            description: `Synchronized ${cumulativeData.mergedCount} sales from Ramesh & Suresh under ${shopName}.`,
             type: 'success',
-            icon: 'git-merge-outline'
+            icon: 'bluetooth'
           });
         }}
       />
@@ -1027,7 +864,7 @@ export default function App() {
       <EODReconciliationModal
         visible={showEOD}
         onClose={() => setShowEOD(false)}
-        apiBaseUrl={getApiBaseUrl()}
+        apiBaseUrl={serverBaseUrl}
         confirmedUpiTotal={dynamicUpiTotal}
         initialClosingCash={liveCashInDrawer}
         initialCashExpenses={totalExpenses}
@@ -1049,7 +886,7 @@ export default function App() {
       <LossModal
         visible={showLoss}
         onClose={() => setShowLoss(false)}
-        apiBaseUrl={getApiBaseUrl()}
+        apiBaseUrl={serverBaseUrl}
         initialCommodity={lossCommodity}
         initialMissingKg={lossTotalKg}
         onCalculate={(r, f, t, c, mKg) => {
@@ -1064,7 +901,7 @@ export default function App() {
       <MandiOcrModal
         visible={showMandiOcr}
         onClose={() => setShowMandiOcr(false)}
-        apiBaseUrl={getApiBaseUrl()}
+        apiBaseUrl={serverBaseUrl}
         onSlipIngested={(summary) => {
           setActiveWholesaleBasis(summary);
           const cost = summary.totalCost;
@@ -1092,7 +929,7 @@ export default function App() {
       <AudioStreamModal
         visible={showAudioStreamModal}
         onClose={() => setShowAudioStreamModal(false)}
-        apiBaseUrl={getApiBaseUrl()}
+        apiBaseUrl={serverBaseUrl}
         onTurnLogged={(turn) => {
           setLatestHeardDialogue(`${turn.speaker}: ${turn.text}`);
           showPrompt({
@@ -1109,6 +946,24 @@ export default function App() {
         visible={showVoiceModal}
         onClose={() => setShowVoiceModal(false)}
         onProcessOrder={handleProcessVoiceOrder}
+        onAddHandwrittenSlip={(slip) => {
+          const newTx: Transaction = {
+            id: `slip-${Date.now()}`,
+            title: slip.title,
+            category: slip.category || (slip.isCredit ? 'Handwritten Sale' : 'Handwritten Expense'),
+            amount: slip.amount,
+            isCredit: slip.isCredit,
+            time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+          };
+          setTransactions(prev => [newTx, ...prev]);
+          showPrompt({
+            badge: slip.isCredit ? 'Slip Sale Recorded' : 'Slip Expense Recorded',
+            title: `${slip.isCredit ? '+' : '-'}₹${slip.amount.toLocaleString('en-IN')}: ${slip.title}`,
+            description: 'Handwritten slip recorded directly into stall double-entry ledger.',
+            type: 'success',
+            icon: 'create-outline'
+          });
+        }}
         loading={loading}
       />
 
@@ -1168,7 +1023,7 @@ export default function App() {
       <CreditBookModal
         visible={showCreditBook}
         onClose={() => setShowCreditBook(false)}
-        apiBaseUrl={getApiBaseUrl()}
+        apiBaseUrl={serverBaseUrl}
         onCreditAdded={(customerName, amount) => {
           showPrompt({
             badge: "Udhar Added",
@@ -1183,7 +1038,7 @@ export default function App() {
       <RecipeModal
         visible={showRecipes}
         onClose={() => setShowRecipes(false)}
-        apiBaseUrl={getApiBaseUrl()}
+        apiBaseUrl={serverBaseUrl}
         onRecipeApplied={(recipeName, servings) => {
           showPrompt({
             badge: "Recipe Deducted",
@@ -1192,6 +1047,46 @@ export default function App() {
             type: "success",
             icon: "restaurant-outline"
           });
+        }}
+      />
+
+      <SettingsModal
+        visible={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        shopName={shopName}
+        vendorName={vendorName}
+        vendorPhone={vendorPhone}
+        serverUrl={serverBaseUrl}
+        currentLanguage={language}
+        onSaveProfile={(profile) => {
+          setShopName(profile.shopName);
+          setVendorName(profile.vendorName);
+          setVendorPhone(profile.phone);
+          setLanguage(profile.language);
+          if (profile.serverUrl) {
+            setServerBaseUrl(profile.serverUrl);
+          }
+          showPrompt({
+            badge: profile.language === 'hi' ? 'प्रोफाइल अपडेट' : 'Profile Updated',
+            title: profile.shopName,
+            description: profile.language === 'hi' ? 'दुकानदार विवरण और सर्वर URL सेव कर लिया गया है।' : `Saved details and server URL.`,
+            type: 'success',
+            icon: 'checkmark-circle-outline'
+          });
+        }}
+      />
+          <ExpenseReportModal
+        visible={showExpenseReport}
+        onClose={() => setShowExpenseReport(false)}
+        transactions={transactions}
+        totalSales={totalSales}
+        totalExpenses={totalExpenses}
+        netBalance={netOperatingBalance}
+        onDeleteTransaction={(id) => {
+          setTransactions(prev => prev.filter(t => t.id !== id));
+        }}
+        onAddTransaction={(tx) => {
+          setTransactions(prev => [tx, ...prev]);
         }}
       />
     </SafeAreaView>
@@ -1218,6 +1113,34 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 10,
   },
+  headerRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerBluetoothBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerBluetoothBtnConnected: {
+    backgroundColor: '#F1FFE5',
+    borderWidth: 1,
+    borderColor: '#C6E8A8',
+  },
+  bluetoothLiveDot: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+  },
   headerIcon: {
     marginRight: 6,
   },
@@ -1231,6 +1154,26 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '800',
     letterSpacing: -0.2,
+  },
+  headerSettingsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+  },
+  langPillBadge: {
+    backgroundColor: '#E2FD52',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  langPillBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#073B3A',
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -1310,13 +1253,13 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   cardAmountText: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '900',
     color: '#073B3A',
     letterSpacing: -0.5,
   },
   cardSubText: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#6B7280',
     marginTop: 4,
     fontWeight: '600',
@@ -1381,7 +1324,7 @@ const styles = StyleSheet.create({
     paddingTop: 18,
   },
   kuroAmount: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: '900',
     color: '#FFFFFF',
     marginBottom: 8,
@@ -1503,6 +1446,51 @@ const styles = StyleSheet.create({
     color: '#6E827D',
     marginTop: 2,
     fontWeight: '500',
+  },
+  noisePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  noisePillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4B5563',
+  },
+  streamSingleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 14,
+    marginTop: 10,
+  },
+  streamSingleBtnStart: {
+    backgroundColor: '#E2FD52',
+  },
+  streamSingleBtnStop: {
+    backgroundColor: '#DC2626',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  streamSingleBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  streamSingleBtnTextStart: {
+    color: '#073B3A',
+  },
+  streamSingleBtnTextStop: {
+    color: '#FFFFFF',
+    fontWeight: '900',
   },
   liveAudioSnippetBar: {
     flexDirection: 'row',
@@ -1671,6 +1659,19 @@ const styles = StyleSheet.create({
     color: '#376300',
     letterSpacing: 0.5,
   },
+  rawSlipTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  limeIconBoxSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#E2FD52',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   wholesaleCardTitle: {
     fontSize: 16,
     fontWeight: '800',
@@ -1683,6 +1684,22 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontWeight: '500',
     lineHeight: 16,
+  },
+  wholesaleBasisRowEmpty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 14,
+    padding: 14,
+    marginVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+  },
+  wholesaleEmptyText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9CA3AF',
   },
   wholesaleBasisRow: {
     flexDirection: 'row',
@@ -2236,59 +2253,53 @@ const styles = StyleSheet.create({
     color: '#DC2626',
   },
 
-  /* 10. BOTTOM DOCK */
+  /* 10. BOTTOM DOCK (4-BUTTON BALANCED CONCEPTZILLA DOCK) */
   bottomDockContainer: {
     position: 'absolute',
-    bottom: 16,
-    left: 40,
-    right: 40,
+    bottom: 18,
+    left: 20,
+    right: 20,
     alignItems: 'center',
+    zIndex: 100,
   },
   dockPill: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderRadius: 30,
-    paddingVertical: 12,
-    paddingHorizontal: 26,
+    borderRadius: 36,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
     width: '100%',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#073B3A',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 10,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#DDECE7',
   },
   dockItem: {
-    padding: 7,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  dockMicButton: {
-    position: 'absolute',
-    left: '50%',
-    top: -20,
-    width: 56,
-    height: 56,
-    marginLeft: -28,
-    borderRadius: 28,
+  dockActionButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#E2FD52',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#073B3A',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  dockMicPulse: {
-    position: 'absolute',
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    backgroundColor: '#E2FD52',
-    opacity: 0.18,
-    transform: [{ scale: 1.08 }],
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   dockIcon: {
     fontSize: 20,

@@ -148,56 +148,53 @@ export const MandiOcrModal: React.FC<Props> = ({
     }
   };
 
-  // Process photo with on-device Google ML Kit Text Recognition & backend verification
-  const processOcrOnSlip = async (base64?: string | null, uri?: string, presetKey?: 'AZADPUR' | 'VASHI' | 'PUNE') => {
+  // Process photo with backend Tesseract OCR & fuzzy produce mapper
+  const processOcrOnSlip = async (base64?: string | null, uri?: string) => {
     setLoading(true);
     setScanStep('SCANNING');
 
     try {
-      let recognizedReceipt: MandiParsedReceipt | null = null;
-
-      // 1. If presetKey is selected, parse sample mandi slip text
-      if (presetKey) {
-        const sampleText = MandiOcrService.getSampleMandiReceiptText(presetKey);
-        recognizedReceipt = MandiOcrService.parseMandiReceiptText(sampleText);
-      } else if (uri) {
-        // 2. Run Google ML Kit On-Device Text Recognition on physical image
-        try {
-          recognizedReceipt = await MandiOcrService.recognizeSlip(uri);
-        } catch (mlKitErr) {
-          console.log('[ML Kit] On-device OCR fallback:', mlKitErr);
-        }
-      }
-
-      // 3. Post to backend wholesale OCR endpoint to log evidence in SQLite
       let serverSlip: any = null;
-      try {
-        const res = await fetch(`${apiBaseUrl}/vendor/wholesale/ocr`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageBase64: base64,
-            imageUri: uri,
-            rawText: recognizedReceipt?.rawText || ''
-          })
-        });
-        const data = await res.json();
-        if (data.ok && data.slip) {
-          serverSlip = data.slip;
+      if (base64) {
+        try {
+          const res = await fetch(`${apiBaseUrl}/vendor/wholesale/ocr`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Bypass-Tunnel-Reminder': 'true'
+            },
+            body: JSON.stringify({
+              imageBase64: base64,
+              imageUri: uri
+            })
+          });
+          const data = await res.json();
+          if (data && data.ok && data.slip) {
+            serverSlip = data.slip;
+          }
+        } catch (netErr: any) {
+          console.warn('[MandiOCR] Backend OCR error:', netErr?.message || netErr);
         }
-      } catch (netErr) {
-        console.log('[MandiOCR] Fallback local parse:', netErr);
       }
 
-      const finalSlip = serverSlip || recognizedReceipt;
-      if (finalSlip) {
-        setMandiName(finalSlip.mandiName || 'Wholesale Mandi Supplier');
-        setSlipNo(finalSlip.slipNo || `MND-${Math.floor(10000 + Math.random() * 90000)}`);
-        setSlipDate(finalSlip.date || 'Today, ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
-        setRawTextExtracted(finalSlip.rawText || '');
-        setItems(finalSlip.items || []);
+      const detectedItems = serverSlip?.items && serverSlip.items.length > 0 ? serverSlip.items : [];
+
+      if (detectedItems.length > 0) {
+        setMandiName(serverSlip?.mandiName || 'Wholesale Mandi Supplier');
+        setSlipNo(serverSlip?.slipNo || `MND-${Math.floor(10000 + Math.random() * 90000)}`);
+        setSlipDate(serverSlip?.date || 'Today, ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
+        setRawTextExtracted(serverSlip?.rawText || '');
+        setItems(detectedItems);
       } else {
+        setMandiName('Wholesale Mandi Slip');
+        setSlipNo(`MND-${Math.floor(10000 + Math.random() * 90000)}`);
+        setSlipDate('Today, ' + new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
+        setRawTextExtracted('');
         setItems([]);
+        Alert.alert(
+          'No Commodities Detected',
+          'Could not decipher commodities from this photo (or backend server was unreachable at ' + apiBaseUrl + '). Please check server connection, retake photo, or add items manually.'
+        );
       }
 
       setScanStep('PARSED');
@@ -207,10 +204,6 @@ export const MandiOcrModal: React.FC<Props> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleTestPreset = (presetKey: 'AZADPUR' | 'VASHI' | 'PUNE') => {
-    processOcrOnSlip(null, undefined, presetKey);
   };
 
   // Dynamic calculations
@@ -398,37 +391,7 @@ export const MandiOcrModal: React.FC<Props> = ({
                   <Text style={styles.galleryBtnText}>Choose from Photo Gallery</Text>
                 </TouchableOpacity>
 
-                {/* Quick Offline Sample Slips for Testing Without Physical Paper */}
-                <View style={{ marginTop: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#E5E7EB', width: '100%' }}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 }}>
-                    Offline Testing: Test Pre-Scanned Mandi Slips
-                  </Text>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <TouchableOpacity
-                      style={{ flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 8, paddingHorizontal: 6, borderRadius: 8, marginRight: 6, alignItems: 'center' }}
-                      onPress={() => handleTestPreset('AZADPUR')}
-                    >
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#073B3A' }}>Azadpur Delhi</Text>
-                      <Text style={{ fontSize: 9, color: '#6B7280' }}>₹1,720 (3 items)</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={{ flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 8, paddingHorizontal: 6, borderRadius: 8, marginHorizontal: 3, alignItems: 'center' }}
-                      onPress={() => handleTestPreset('VASHI')}
-                    >
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#073B3A' }}>Vashi APMC</Text>
-                      <Text style={{ fontSize: 9, color: '#6B7280' }}>₹3,520 (Bori/Crate)</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={{ flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 8, paddingHorizontal: 6, borderRadius: 8, marginLeft: 6, alignItems: 'center' }}
-                      onPress={() => handleTestPreset('PUNE')}
-                    >
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#073B3A' }}>Pune Market</Text>
-                      <Text style={{ fontSize: 9, color: '#6B7280' }}>₹3,260 (Poha/Oil)</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                
               </View>
             )}
 
@@ -476,7 +439,18 @@ export const MandiOcrModal: React.FC<Props> = ({
 
                   <Text style={styles.receiptSectionHeader}>EXTRACTED COMMODITIES (EDITABLE)</Text>
 
-                  {items.map((item, idx) => (
+                  {items.length === 0 ? (
+                    <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                      <Ionicons name="alert-circle-outline" size={28} color="#9CA3AF" style={{ marginBottom: 6 }} />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#374151', textAlign: 'center' }}>
+                        No commodities detected from slip
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#6B7280', textAlign: 'center', marginTop: 3 }}>
+                        Tap "Add Missing Commodity" below to record manually or tap Retake.
+                      </Text>
+                    </View>
+                  ) : (
+                    items.map((item, idx) => (
                     <View key={idx} style={styles.editableItemRow}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.itemNameText}>{item.name}</Text>
@@ -510,7 +484,7 @@ export const MandiOcrModal: React.FC<Props> = ({
                         </TouchableOpacity>
                       </View>
                     </View>
-                  ))}
+                  )))}
 
                   {/* Add New Item Form Toggle */}
                   {showAddItem ? (

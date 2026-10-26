@@ -16,6 +16,7 @@
       }
     },
     "android": {
+      "package": "com.cascade.app",
       "adaptiveIcon": {
         "backgroundColor": "#0f172a"
       },
