@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -18,6 +18,7 @@ interface Props {
   vendorPhone?: string;
   serverUrl?: string;
   currentLanguage?: 'en' | 'hi';
+  onLanguageChange?: (lang: 'en' | 'hi') => void;
   onSaveProfile: (profile: { shopName: string; vendorName: string; phone: string; language: 'en' | 'hi'; serverUrl?: string }) => void;
 }
 
@@ -29,6 +30,7 @@ export const SettingsModal: React.FC<Props> = ({
   vendorPhone: initialPhone = '+91 98765 43210',
   serverUrl: initialServerUrl = 'https://tame-shoes-change.loca.lt/api',
   currentLanguage: initialLang = 'en',
+  onLanguageChange,
   onSaveProfile
 }) => {
   const [currentPage, setCurrentPage] = useState<'SETTINGS' | 'EDIT_PROFILE'>('SETTINGS');
@@ -37,6 +39,12 @@ export const SettingsModal: React.FC<Props> = ({
   const [phone, setPhone] = useState(initialPhone);
   const [serverUrl, setServerUrl] = useState(initialServerUrl);
   const [language, setLanguage] = useState<'en' | 'hi'>(initialLang);
+
+  useEffect(() => {
+    if (initialLang) {
+      setLanguage(initialLang);
+    }
+  }, [initialLang, visible]);
 
   const handleSave = () => {
     onSaveProfile({
@@ -114,7 +122,10 @@ export const SettingsModal: React.FC<Props> = ({
                 <View style={styles.langRow}>
                   <TouchableOpacity
                     style={[styles.langBtn, language === 'en' && styles.langBtnActive]}
-                    onPress={() => setLanguage('en')}
+                    onPress={() => {
+                      setLanguage('en');
+                      onLanguageChange?.('en');
+                    }}
                   >
                     <Ionicons
                       name={language === 'en' ? 'radio-button-on' : 'radio-button-off'}
@@ -127,7 +138,10 @@ export const SettingsModal: React.FC<Props> = ({
 
                   <TouchableOpacity
                     style={[styles.langBtn, language === 'hi' && styles.langBtnActive]}
-                    onPress={() => setLanguage('hi')}
+                    onPress={() => {
+                      setLanguage('hi');
+                      onLanguageChange?.('hi');
+                    }}
                   >
                     <Ionicons
                       name={language === 'hi' ? 'radio-button-on' : 'radio-button-off'}
@@ -310,12 +324,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
     color: '#073B3A',
   },
   modalSubtitle: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#6B7280',
     marginTop: 1,
   },
@@ -339,7 +353,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#073B3A',
   },
   tabText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
     color: '#6B7280',
   },
@@ -351,7 +365,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   sectionLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '800',
     color: '#073B3A',
     marginBottom: 10,
@@ -377,7 +391,7 @@ const styles = StyleSheet.create({
     borderColor: '#79AF00',
   },
   langText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     color: '#6B7280',
   },
@@ -403,23 +417,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   profileAvatarText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     color: '#E2FD52',
   },
   profileVendorName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     color: '#073B3A',
   },
   profileShopName: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#4B5563',
     fontWeight: '600',
     marginTop: 1,
   },
   profilePhone: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#9CA3AF',
     marginTop: 2,
   },
@@ -435,7 +449,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   editProfileBtnText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: '#073B3A',
   },
@@ -443,7 +457,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   fieldLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: '#4B5563',
     marginBottom: 6,
@@ -455,7 +469,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 11,
-    fontSize: 13,
+    fontSize: 15,
     color: '#111827',
   },
   infoBox: {
@@ -469,10 +483,27 @@ const styles = StyleSheet.create({
     marginVertical: 14,
   },
   infoText: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#073B3A',
     fontWeight: '600',
     flex: 1,
+  },
+  tutorialBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingVertical: 13,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  tutorialBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#073B3A',
   },
   saveBtn: {
     flexDirection: 'row',
@@ -484,7 +515,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   saveBtnText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     color: '#073B3A',
   },
@@ -494,7 +525,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   cancelLinkText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: '#6B7280',
   },

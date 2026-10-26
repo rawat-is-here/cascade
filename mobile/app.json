@@ -1,22 +1,22 @@
 {
   "expo": {
-    "name": "Cascade 0.5%",
-    "slug": "cascade-05-percent",
+    "name": "Swayam",
+    "slug": "swayam",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#0f172a"
+      "backgroundColor": "#073B3A"
     },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Cascade requires camera access to scan and OCR wholesale mandi slips."
+        "NSCameraUsageDescription": "Swayam requires camera access to scan and OCR wholesale mandi slips."
       }
     },
     "android": {
-      "package": "com.cascade.app",
+      "package": "com.swayam.app",
       "adaptiveIcon": {
         "backgroundColor": "#0f172a"
       },

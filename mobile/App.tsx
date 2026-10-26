@@ -25,6 +25,10 @@ import { CreditBookModal } from './components/CreditBookModal';
 import { RecipeModal } from './components/RecipeModal';
 import { SettingsModal } from './components/SettingsModal';
 import { ExpenseReportModal } from './components/ExpenseReportModal';
+import { LatentInventoryModal } from './components/LatentInventoryModal';
+import { UniversalLedgerModal, LedgerTransaction } from './components/UniversalLedgerModal';
+import { SwayamLogo } from './components/SwayamLogo';
+import { getTranslation } from './utils/translations';
 
 interface Transaction {
   id: string;
@@ -81,8 +85,63 @@ export default function App() {
   // Baseline opening cash float & Dynamic Financial State
   const openingFloat = 500;
 
-  // Transactions (Single Source of Truth - 100% Dynamic)
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  // Transactions & Udhaar History (Single Source of Truth - 100% Dynamic)
+  const [transactions, setTransactions] = useState<LedgerTransaction[]>([
+    {
+      id: 'tx-init-1',
+      title: 'Paytm Soundbox: 2 Poha + 1 Tea',
+      category: 'Soundbox Verified',
+      amount: 50,
+      isCredit: true,
+      time: '12:40 PM'
+    },
+    {
+      id: 'tx-init-2',
+      title: 'Sharma ji (2 Chai + 1 Poha)',
+      category: 'Customer Udhaar',
+      amount: 35,
+      isCredit: false,
+      isUdhaar: true,
+      isSettled: false,
+      customerName: 'Sharma ji',
+      time: '12:28 PM'
+    },
+    {
+      id: 'tx-init-3',
+      title: 'Voice Order: 4kg Aloo @ ₹20',
+      category: 'Voice Sale',
+      amount: 80,
+      isCredit: true,
+      time: '12:15 PM'
+    },
+    {
+      id: 'tx-init-4',
+      title: 'Mandi Wholesale: 25kg Aloo, 15kg Tamatar',
+      category: 'Wholesale Mandi COGS',
+      amount: 620,
+      isCredit: false,
+      time: '06:30 AM'
+    },
+    {
+      id: 'tx-init-5',
+      title: 'Ramesh Helper Cash Sale (3 Chai)',
+      category: 'Cash Sale',
+      amount: 30,
+      isCredit: true,
+      time: '11:50 AM'
+    },
+    {
+      id: 'tx-init-6',
+      title: 'Munna Bhai Udhaar (Poha parcel)',
+      category: 'Customer Udhaar',
+      amount: 40,
+      isCredit: false,
+      isUdhaar: true,
+      isSettled: false,
+      customerName: 'Munna Bhai',
+      time: '11:20 AM'
+    }
+  ]);
 
   // Dynamic calculations derived from live transactions
   const totalSales = useMemo(() => {
@@ -95,6 +154,10 @@ export default function App() {
 
   const netOperatingBalance = totalSales - totalExpenses;
   const liveCashInDrawer = openingFloat + netOperatingBalance;
+
+  const pendingUdhaarCount = useMemo(() => {
+    return transactions.filter(t => (t.isUdhaar || t.category.toLowerCase().includes('udhaar')) && !t.isSettled).length;
+  }, [transactions]);
 
   const dynamicUpiTotal = useMemo(() => {
     return transactions
@@ -114,9 +177,12 @@ export default function App() {
 
   // Modals & Navigation
   const [isBluetoothConnected, setIsBluetoothConnected] = useState(true);
+  const [showInventoryModal, setShowInventoryModal] = useState(false);
+  const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showExpenseReport, setShowExpenseReport] = useState(false);
   const [language, setLanguage] = useState<'en' | 'hi'>('en');
+  const t = getTranslation(language);
   const [vendorName, setVendorName] = useState('Akash Rawat');
   const [vendorPhone, setVendorPhone] = useState('+91 98765 43210');
   const [serverBaseUrl, setServerBaseUrl] = useState<string>(getApiBaseUrl());
@@ -138,6 +204,13 @@ export default function App() {
   const [profitBounds, setProfitBounds] = useState<{ lower: number; upper: number; estimate: number; margin: number } | null>(null);
   const [profitLoading, setProfitLoading] = useState(false);
   const [activeWholesaleBasis, setActiveWholesaleBasis] = useState<{ totalCost: number; itemsCount: number; supplier: string } | null>(null);
+
+  const actualProfitValue = useMemo(() => {
+    if (profitBounds && profitBounds.estimate > 0) {
+      return Math.round(profitBounds.estimate);
+    }
+    return Math.max(0, Math.round(totalSales * 0.38));
+  }, [profitBounds, totalSales]);
 
   useEffect(() => {
     fetchProfitBounds();
@@ -354,8 +427,12 @@ export default function App() {
       {/* HEADER SECTION */}
       <View style={styles.topHeader}>
         <View style={styles.headerLeft}>
-          <Ionicons name="storefront-outline" size={18} color="#073B3A" style={styles.headerIcon} />
-          <Text style={styles.headerTitle} numberOfLines={1}>{shopName}</Text>
+          <SwayamLogo size={38} />
+          <View style={{ marginLeft: 10 }}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {language === 'hi' && shopName === 'Akash Chai & Poha Stall' ? t.storeNameDefault : shopName}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.headerRightGroup}>
@@ -373,83 +450,61 @@ export default function App() {
             {isBluetoothConnected && <View style={styles.bluetoothLiveDot} />}
           </TouchableOpacity>
 
-          {/* Settings and Language Profile Button */}
-          <TouchableOpacity
-            style={styles.headerSettingsBtn}
-            onPress={() => setShowSettingsModal(true)}
-            accessibilityLabel="Settings and Profile"
-          >
-            <View style={styles.langPillBadge}>
+          {/* 1-Tap Language Toggle Badge & Settings */}
+          <View style={styles.headerRightGroup}>
+            <TouchableOpacity
+              style={styles.langPillBadge}
+              onPress={() => setLanguage(prev => (prev === 'en' ? 'hi' : 'en'))}
+              activeOpacity={0.7}
+              accessibilityLabel="Toggle Language English / Hindi"
+            >
               <Text style={styles.langPillBadgeText}>{language === 'hi' ? 'हिन्दी' : 'EN'}</Text>
-            </View>
-            <Ionicons name="settings-outline" size={19} color="#073B3A" />
-          </TouchableOpacity>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.headerSettingsBtn}
+              onPress={() => setShowSettingsModal(true)}
+              accessibilityLabel="Settings and Profile"
+            >
+              <Ionicons name="settings-outline" size={19} color="#073B3A" />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-        {/* 1. CONCEPTZILLA TWIN CARDS: TOTAL SALE RECORDED & ACTUAL PROFIT */}
+        {/* 1. CONCEPTZILLA TWIN CARDS: TOTAL SALES & ACTUAL PROFIT */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.cardsCarousel}
         >
-          {/* CARD 1: ZILLA WAVE CARD (TOTAL SALE RECORDED) */}
-          <View style={styles.zillaCard}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.cardBrandBlock}>
-                <Text style={styles.cardBrandTitle}>Total Sale Recorded</Text>
-              </View>
-              {/* Organic Curved Wave Graphic on Right */}
-              <View style={styles.cardWaveContainer}>
-                <View style={styles.cardWavePine} />
-                <View style={styles.cardWaveLime} />
-              </View>
+          {/* CARD 1: TOTAL SALES (DEEP PINE WITH ELECTRIC LIME ORGANIC CURVES) */}
+          <View style={styles.twinCardPine}>
+            {/* Signature Organic Fluid Curve Elements */}
+            <View style={styles.cardCurveContainer} pointerEvents="none">
+              <View style={styles.cardCurveDarkTeal} />
+              <View style={styles.cardCurveLimeWave} />
             </View>
 
-            <View style={styles.cardAmountBlock}>
-              <Text style={styles.cardAmountText}>₹{totalSales.toLocaleString('en-IN')}.00</Text>
-              <Text style={styles.cardSubText}>
-                {transactions.filter(t => t.isCredit).length} sales verified today • Live Register
-              </Text>
-            </View>
-
-            <View style={styles.cardFooterRow}>
-              <View />
-              <View style={styles.cardCircles}>
-                <View style={[styles.circleHalf, { backgroundColor: '#EB001B' }]} />
-                <View style={[styles.circleHalf, { backgroundColor: '#F79E1B', marginLeft: -8 }]} />
-              </View>
+            <View style={styles.cardMainContent}>
+              <Text style={styles.cardMicroTitlePine}>{t.totalSales.toUpperCase()}</Text>
+              <Text style={styles.cardBigNumberPine}>₹{totalSales.toLocaleString('en-IN')}</Text>
             </View>
           </View>
 
-          {/* CARD 2: KURO CARD (ACTUAL PROFIT — LIVE API) */}
-          <View style={styles.kuroCard}>
-            <View style={styles.kuroTopRow}>
-              <Text style={styles.kuroTitle}>Actual Profit</Text>
+          {/* CARD 2: ACTUAL PROFIT (ELECTRIC LIME WITH DEEP PINE ORGANIC CURVES) */}
+          <View style={styles.twinCardLime}>
+            {/* Signature Organic Fluid Curve Elements */}
+            <View style={styles.cardCurveContainer} pointerEvents="none">
+              <View style={styles.cardCurveLimeOuter} />
+              <View style={styles.cardCurvePineWave} />
             </View>
 
-            <View style={styles.kuroWavePineBottom}>
-              {profitLoading ? (
-                <Text style={styles.kuroAmount}>Calculating...</Text>
-              ) : profitBounds ? (
-                <Text style={styles.kuroAmount}>
-                  ₹{profitBounds.lower.toLocaleString('en-IN')} – ₹{profitBounds.upper.toLocaleString('en-IN')}
-                </Text>
-              ) : (
-                <Text style={styles.kuroAmount}>
-                  ₹{Math.max(0, Math.round(netOperatingBalance * 0.35)).toLocaleString('en-IN')} – ₹{Math.max(0, Math.round(netOperatingBalance * 0.44)).toLocaleString('en-IN')}
-                </Text>
-              )}
-              <View style={styles.kuroFooterRow}>
-                <Text style={styles.kuroCardNumber}>
-                  {profitBounds ? `Net Margin ~${profitBounds.margin}%` : 'Net Margin ~38%'}
-                </Text>
-                <TouchableOpacity onPress={fetchProfitBounds}>
-                  <Text style={styles.kuroVisaBadge}>↻ Recalc</Text>
-                </TouchableOpacity>
-              </View>
+            <View style={styles.cardMainContent}>
+              <Text style={styles.cardMicroTitleLime}>{t.actualProfit.toUpperCase()}</Text>
+              <Text style={styles.cardBigNumberLime}>₹{actualProfitValue.toLocaleString('en-IN')}</Text>
             </View>
           </View>
         </ScrollView>
@@ -458,11 +513,11 @@ export default function App() {
         <View style={styles.listeningCard}>
           <View style={styles.listeningCardHeader}>
             <Text style={styles.listeningHeroTitle}>
-              {isListening ? 'Stream Active' : 'Start Stream'}
+              {isListening ? t.streamActive : t.startStream}
             </Text>
             <View style={styles.noisePill}>
               <Ionicons name="volume-medium-outline" size={13} color="#073B3A" style={{ marginRight: 4 }} />
-              <Text style={styles.noisePillText}>{isListening ? `Noise: ${currentNoiseDb} dB` : 'Noise: 0 dB'}</Text>
+              <Text style={styles.noisePillText}>{isListening ? `${t.noise}: ${currentNoiseDb} dB` : `${t.noise}: 0 dB`}</Text>
             </View>
           </View>
 
@@ -470,12 +525,12 @@ export default function App() {
           <View style={styles.audioStreamHudRow}>
             <View style={styles.hudLeftMetrics}>
               <View style={styles.hudMetricItem}>
-                <Text style={styles.hudLabel}>VAD ENERGY</Text>
-                <Text style={styles.hudValGreen}>{isListening ? 'SPEECH ACTIVE' : 'MUTED'}</Text>
+                <Text style={styles.hudLabel}>{t.vadEnergy}</Text>
+                <Text style={styles.hudValGreen}>{isListening ? t.speechActive : t.muted}</Text>
               </View>
               <View style={styles.hudMetricItem}>
-                <Text style={styles.hudLabel}>SPEAKER</Text>
-                <Text style={styles.hudVal}>{isListening ? 'VENDOR (Active)' : 'STANDBY'}</Text>
+                <Text style={styles.hudLabel}>{t.speaker}</Text>
+                <Text style={styles.hudVal}>{isListening ? t.vendorActive : t.standby}</Text>
               </View>
             </View>
 
@@ -492,7 +547,7 @@ export default function App() {
                 <Ionicons name="chatbubble-ellipses-outline" size={13} color="#073B3A" />
               </View>
               <View style={{ flex: 1, marginLeft: 8 }}>
-                <Text style={styles.audioSnippetLabel}>STREAMED TURN → POST /audio/turn</Text>
+                <Text style={styles.audioSnippetLabel}>{t.streamedTurn}</Text>
                 <Text style={styles.audioSnippetText} numberOfLines={1}>
                   {latestHeardDialogue}
                 </Text>
@@ -508,17 +563,17 @@ export default function App() {
                 const nextState = !prev;
                 if (nextState) {
                   showPrompt({
-                    badge: 'Stream Started',
-                    title: 'Acoustic Stream Active',
-                    description: 'Microphone active in background. Streaming to POST /audio/turn.',
+                    badge: language === 'hi' ? 'स्ट्रीम शुरू हुई' : 'Stream Started',
+                    title: language === 'hi' ? 'ऑडियो स्ट्रीम सक्रिय है' : 'Acoustic Stream Active',
+                    description: language === 'hi' ? 'बैकग्राउंड में माइक चालू है। POST /audio/turn पर ऑडियो जा रहा है।' : 'Microphone active in background. Streaming to POST /audio/turn.',
                     type: 'success',
                     icon: 'mic-outline'
                   });
                 } else {
                   showPrompt({
-                    badge: 'Stream Stopped',
-                    title: 'Microphone Paused',
-                    description: 'Microphone paused. Tap Start to resume.',
+                    badge: language === 'hi' ? 'स्ट्रीम रोकी गई' : 'Stream Stopped',
+                    title: language === 'hi' ? 'माइक रुका हुआ है' : 'Microphone Paused',
+                    description: language === 'hi' ? 'माइक रोक दिया गया है। फिर से शुरू करने के लिए टैप करें।' : 'Microphone paused. Tap Start to resume.',
                     type: 'neutral',
                     icon: 'pause-circle-outline'
                   });
@@ -534,7 +589,7 @@ export default function App() {
               style={{ marginRight: 6 }}
             />
             <Text style={[styles.streamSingleBtnText, isListening ? styles.streamSingleBtnTextStop : styles.streamSingleBtnTextStart]}>
-              {isListening ? 'Stop Stream' : 'Start Stream'}
+              {isListening ? t.stopStream : t.startStreamBtn}
             </Text>
           </TouchableOpacity>
         </View>
@@ -547,9 +602,14 @@ export default function App() {
                 <Ionicons name="ear-outline" size={20} color="#073B3A" />
               </View>
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.confirmTitle}>Did you hear right?</Text>
+                <Text style={styles.confirmTitle}>{t.didYouHearRight}</Text>
                 <Text style={styles.confirmQuestion}>
-                  Did the customer ask for <Text style={{ fontWeight: '800', color: '#073B3A' }}>{confirmationPending.item}</Text> for <Text style={{ fontWeight: '800', color: '#073B3A' }}>₹{confirmationPending.amount}</Text>?
+                  {language === 'hi'
+                    ? `${t.didCustomerAskFor} `
+                    : 'Did the customer ask for '}
+                  <Text style={{ fontWeight: '800', color: '#073B3A' }}>{confirmationPending.item}</Text>
+                  {language === 'hi' ? ' कीमत ' : ' for '}
+                  <Text style={{ fontWeight: '800', color: '#073B3A' }}>₹{confirmationPending.amount}</Text>?
                 </Text>
                 <Text style={styles.confirmSpokenQuote}>“{confirmationPending.text}”</Text>
               </View>
@@ -581,7 +641,9 @@ export default function App() {
                 }}
               >
                 <Ionicons name="checkmark-circle" size={15} color="#073B3A" style={{ marginRight: 5 }} />
-                <Text style={styles.confirmYesText}>Yes, Correct (+₹{confirmationPending.amount})</Text>
+                <Text style={styles.confirmYesText}>
+                  {t.yesCorrect} (+₹{confirmationPending.amount})
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -589,16 +651,16 @@ export default function App() {
                 onPress={() => {
                   setConfirmationPending(null);
                   showPrompt({
-                    badge: 'Audio Quarantined',
-                    title: 'Noisy Audio Ignored',
-                    description: 'Discarded ambiguous audio. No phantom sale was added.',
+                    badge: language === 'hi' ? 'ऑडियो हटाया' : 'Audio Quarantined',
+                    title: language === 'hi' ? 'शोर वाला ऑडियो अनदेखा किया' : 'Noisy Audio Ignored',
+                    description: language === 'hi' ? 'संदिग्ध ऑडियो हटा दिया गया। कोई फर्जी बिक्री नहीं जुड़ी।' : 'Discarded ambiguous audio. No phantom sale was added.',
                     type: 'warning',
                     icon: 'close-circle-outline'
                   });
                 }}
               >
                 <Ionicons name="close-circle-outline" size={15} color="#6B7280" style={{ marginRight: 4 }} />
-                <Text style={styles.confirmNoText}>No, Ignore</Text>
+                <Text style={styles.confirmNoText}>{t.noIgnore}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -608,12 +670,12 @@ export default function App() {
         <View style={styles.periodTableCard}>
           <View style={styles.balanceHeaderRow}>
             <View>
-              <Text style={styles.periodHeader}>TODAY’S NET BALANCE</Text>
+              <Text style={styles.periodHeader}>{t.todaysNetBalance}</Text>
               <Text style={styles.balanceHeroAmount}>₹{liveCashInDrawer.toLocaleString('en-IN')}.00</Text>
             </View>
             <View style={styles.balanceLivePill}>
               <View style={styles.liveDot} />
-              <Text style={styles.balanceLiveText}>LIVE</Text>
+              <Text style={styles.balanceLiveText}>{t.live}</Text>
             </View>
           </View>
           
@@ -622,7 +684,7 @@ export default function App() {
               <View style={styles.arrowCircle}>
                 <Text style={styles.arrowSymbol}>↑</Text>
               </View>
-              <Text style={styles.periodLabel}>Money in (Total sales)</Text>
+              <Text style={styles.periodLabel}>{t.moneyInTotalSales}</Text>
             </View>
             <Text style={styles.periodValueCredit}>+₹{totalSales.toLocaleString('en-IN')}.00</Text>
           </View>
@@ -632,7 +694,7 @@ export default function App() {
               <View style={styles.arrowCircle}>
                 <Text style={styles.arrowSymbol}>↓</Text>
               </View>
-              <Text style={styles.periodLabel}>Money out (Expenses)</Text>
+              <Text style={styles.periodLabel}>{t.moneyOutExpenses}</Text>
             </View>
             <Text style={styles.periodValueDebit}>-₹{totalExpenses.toLocaleString('en-IN')}.00</Text>
           </View>
@@ -642,7 +704,7 @@ export default function App() {
               <View style={[styles.arrowCircle, { borderColor: '#073B3A' }]}>
               <Ionicons name="trending-up-outline" size={12} color="#073B3A" />
               </View>
-              <Text style={[styles.periodLabel, { fontWeight: '700' }]}>Net operating balance</Text>
+              <Text style={[styles.periodLabel, { fontWeight: '700' }]}>{t.netOperatingBalance}</Text>
             </View>
             <Text style={styles.periodValueAccrual}>
               {netOperatingBalance >= 0 ? '+' : '-'}₹{Math.abs(netOperatingBalance).toLocaleString('en-IN')}.00
@@ -657,17 +719,17 @@ export default function App() {
               <View style={styles.limeIconBoxSmall}>
                 <Ionicons name="receipt-outline" size={16} color="#073B3A" />
               </View>
-              <Text style={styles.wholesaleCardTitle}>Raw Material Slip</Text>
+              <Text style={styles.wholesaleCardTitle}>{t.wholesaleCardTitle}</Text>
             </View>
           </View>
 
           {activeWholesaleBasis && activeWholesaleBasis.totalCost > 0 ? (
             <View style={styles.wholesaleBasisRow}>
               <View style={styles.wholesaleBasisLeft}>
-                <Text style={styles.wholesaleBasisLabel}>RECORDED COST BASIS</Text>
+                <Text style={styles.wholesaleBasisLabel}>{t.recordedCostBasis}</Text>
                 <Text style={styles.wholesaleBasisValue}>₹{activeWholesaleBasis.totalCost.toLocaleString('en-IN')}.00</Text>
                 {activeWholesaleBasis.supplier ? (
-                  <Text style={styles.wholesaleSupplierText}>Supplier: {activeWholesaleBasis.supplier}</Text>
+                  <Text style={styles.wholesaleSupplierText}>{t.supplier}: {activeWholesaleBasis.supplier}</Text>
                 ) : null}
               </View>
               <View style={styles.limeIconBox}>
@@ -677,7 +739,7 @@ export default function App() {
           ) : (
             <View style={styles.wholesaleBasisRowEmpty}>
               <Ionicons name="scan-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
-              <Text style={styles.wholesaleEmptyText}>No raw material slip recorded yet</Text>
+              <Text style={styles.wholesaleEmptyText}>{t.noRawMaterialSlip}</Text>
             </View>
           )}
 
@@ -687,7 +749,7 @@ export default function App() {
               onPress={() => setShowMandiOcr(true)}
             >
               <Ionicons name="camera-outline" size={16} color="#073B3A" style={{ marginRight: 6 }} />
-              <Text style={styles.scanSlipPrimaryText}>Scan Mandi Slip (OCR)</Text>
+              <Text style={styles.scanSlipPrimaryText}>{t.scanMandiSlipBtn}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -695,14 +757,14 @@ export default function App() {
               onPress={() => setShowMorningStock(true)}
             >
               <Ionicons name="add-outline" size={16} color="#374151" style={{ marginRight: 4 }} />
-              <Text style={styles.manualSlipSecondaryText}>Manual Bill</Text>
+              <Text style={styles.manualSlipSecondaryText}>{t.manualBillBtn}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Stall Actions</Text>
+        <Text style={styles.sectionTitle}>{t.stallActionsTitle}</Text>
         <View style={styles.actionsGrid}>
-          {/* Daily Stall Action Cards: Add Stock | Spoiled Stock | Close Stall */}
+          {/* Daily Stall Action Cards: Row 1 */}
           <View style={styles.actionsGridRow}>
             <TouchableOpacity
               style={styles.actionGridItem}
@@ -711,19 +773,19 @@ export default function App() {
               <View style={styles.limeIconBox}>
                 <Ionicons name="cart-outline" size={20} color="#073B3A" />
               </View>
-              <Text style={styles.actionGridTitle}>Add Stock</Text>
-              <Text style={styles.actionGridSub}>Mandi bill</Text>
+              <Text style={styles.actionGridTitle}>{t.addStock}</Text>
+              <Text style={styles.actionGridSub}>{t.addStockSub}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.actionGridItem}
-              onPress={() => setShowLoss(true)}
+              onPress={() => setShowCreditBook(true)}
             >
               <View style={styles.limeIconBox}>
-                <Ionicons name="pie-chart-outline" size={20} color="#073B3A" />
+                <Ionicons name="book-outline" size={20} color="#073B3A" />
               </View>
-              <Text style={styles.actionGridTitle}>Spoiled Stock</Text>
-              <Text style={styles.actionGridSub}>Heat & lunch</Text>
+              <Text style={styles.actionGridTitle}>{t.customerUdhaar}</Text>
+              <Text style={styles.actionGridSub}>{t.customerUdhaarSub}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -733,8 +795,56 @@ export default function App() {
               <View style={styles.limeIconBox}>
                 <Ionicons name="checkmark-done-outline" size={20} color="#073B3A" />
               </View>
-              <Text style={styles.actionGridTitle}>Close Stall</Text>
-              <Text style={styles.actionGridSub}>Count drawer</Text>
+              <Text style={styles.actionGridTitle}>{t.closeStall}</Text>
+              <Text style={styles.actionGridSub}>{t.closeStallSub}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Daily Stall Action Cards: Row 2 (3 Replicated Conceptzilla Cards: Latent Stock, Khata & Ledger, Spoilage & Loss) */}
+          <View style={styles.actionsGridRow2}>
+            {/* Card 4: Latent Stock */}
+            <TouchableOpacity
+              style={styles.actionGridCardLarge}
+              onPress={() => setShowInventoryModal(true)}
+              activeOpacity={0.85}
+            >
+              <View style={styles.actionCardTop}>
+                <View style={styles.limeIconBoxRow2}>
+                  <Ionicons name="cube-outline" size={16} color="#073B3A" />
+                </View>
+              </View>
+              <Text style={styles.actionGridCardTitle}>{t.latentStock}</Text>
+              <Text style={styles.actionGridCardSub}>{t.latentStockSub}</Text>
+            </TouchableOpacity>
+
+            {/* Card 5: Khata & Ledger */}
+            <TouchableOpacity
+              style={styles.actionGridCardLarge}
+              onPress={() => setShowLedgerModal(true)}
+              activeOpacity={0.85}
+            >
+              <View style={styles.actionCardTop}>
+                <View style={styles.limeIconBoxRow2}>
+                  <Ionicons name="receipt-outline" size={16} color="#073B3A" />
+                </View>
+              </View>
+              <Text style={styles.actionGridCardTitle}>{t.khataLedger}</Text>
+              <Text style={styles.actionGridCardSub}>{t.khataLedgerSub}</Text>
+            </TouchableOpacity>
+
+            {/* Card 6: Spoilage, Lost & Theft (6TH CARD) */}
+            <TouchableOpacity
+              style={styles.actionGridCardLarge}
+              onPress={() => setShowLoss(true)}
+              activeOpacity={0.85}
+            >
+              <View style={styles.actionCardTop}>
+                <View style={styles.limeIconBoxRow2}>
+                  <Ionicons name="pie-chart-outline" size={16} color="#073B3A" />
+                </View>
+              </View>
+              <Text style={styles.actionGridCardTitle}>{t.lossTheftCardTitle}</Text>
+              <Text style={styles.actionGridCardSub}>{t.lossTheftCardSub}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -886,6 +996,7 @@ export default function App() {
       <LossModal
         visible={showLoss}
         onClose={() => setShowLoss(false)}
+        language={language}
         apiBaseUrl={serverBaseUrl}
         initialCommodity={lossCommodity}
         initialMissingKg={lossTotalKg}
@@ -1058,6 +1169,7 @@ export default function App() {
         vendorPhone={vendorPhone}
         serverUrl={serverBaseUrl}
         currentLanguage={language}
+        onLanguageChange={setLanguage}
         onSaveProfile={(profile) => {
           setShopName(profile.shopName);
           setVendorName(profile.vendorName);
@@ -1075,9 +1187,67 @@ export default function App() {
           });
         }}
       />
-          <ExpenseReportModal
+      <LatentInventoryModal
+        visible={showInventoryModal}
+        onClose={() => setShowInventoryModal(false)}
+        language={language}
+        lossCommodity={lossCommodity}
+        rotLoss={rotLoss}
+        familyLunch={familyLunch}
+        theftLoss={theftLoss}
+        lossTotalKg={lossTotalKg}
+        onOpenLossModal={() => {
+          setShowInventoryModal(false);
+          setShowLoss(true);
+        }}
+        onOpenMorningStock={() => {
+          setShowInventoryModal(false);
+          setShowMorningStock(true);
+        }}
+      />
+
+      <UniversalLedgerModal
+        visible={showLedgerModal}
+        onClose={() => setShowLedgerModal(false)}
+        language={language}
+        transactions={transactions}
+        totalSales={totalSales}
+        totalExpenses={totalExpenses}
+        netBalance={netOperatingBalance}
+        onDeleteTransaction={(id) => {
+          setTransactions(prev => prev.filter(t => t.id !== id));
+        }}
+        onSettleUdhaar={(id, amt, title) => {
+          setTransactions(prev => prev.map(t => {
+            if (t.id === id) {
+              return { ...t, isSettled: true, isCredit: true };
+            }
+            return t;
+          }));
+          showPrompt({
+            badge: language === 'hi' ? 'उधार चुकता' : 'Udhaar Settled',
+            title: language === 'hi' ? `प्राप्त +₹${amt}: ${title}` : `Received +₹${amt}: ${title}`,
+            description: language === 'hi' ? 'ग्राहक का उधार गल्ले के कैश में जमा कर दिया गया।' : 'Customer credit settled into physical cash drawer float.',
+            type: 'success',
+            icon: 'checkmark-circle-outline'
+          });
+        }}
+        onAddTransaction={(newTx) => {
+          setTransactions(prev => [newTx, ...prev]);
+          showPrompt({
+            badge: newTx.isUdhaar ? (language === 'hi' ? 'उधार दर्ज' : 'Udhaar Recorded') : newTx.isCredit ? (language === 'hi' ? 'बिक्री जोड़ी' : 'Sale Added') : (language === 'hi' ? 'खर्च दर्ज' : 'Expense Recorded'),
+            title: `${newTx.title}: ₹${newTx.amount}`,
+            description: language === 'hi' ? 'खाते में प्रविष्टि सफलतापूर्वक दर्ज हो गई।' : 'Transaction recorded into universal ledger.',
+            type: 'info',
+            icon: 'receipt-outline'
+          });
+        }}
+      />
+
+      <ExpenseReportModal
         visible={showExpenseReport}
         onClose={() => setShowExpenseReport(false)}
+        language={language}
         transactions={transactions}
         totalSales={totalSales}
         totalExpenses={totalExpenses}
@@ -1089,6 +1259,8 @@ export default function App() {
           setTransactions(prev => [tx, ...prev]);
         }}
       />
+
+
     </SafeAreaView>
   );
 }
@@ -1145,12 +1317,12 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   headerTitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#111827',
     fontWeight: '700',
   },
   headerGrossAmount: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#111827',
     fontWeight: '800',
     letterSpacing: -0.2,
@@ -1171,7 +1343,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   langPillBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     color: '#073B3A',
   },
@@ -1185,165 +1357,186 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingBottom: 16,
   },
-  zillaCard: {
-    width: 250,
-    height: 155,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 18,
+  /* 1. CONCEPTZILLA TWIN CARDS (CURVE DESIGN) */
+  twinCardPine: {
+    width: 270,
+    height: 156,
+    backgroundColor: '#073B3A',
+    borderRadius: 28,
+    padding: 20,
     marginRight: 14,
-    borderWidth: 1,
-    borderColor: '#DDECE7',
-    justifyContent: 'space-between',
     overflow: 'hidden',
     position: 'relative',
+    justifyContent: 'center',
     shadowColor: '#073B3A',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    elevation: 4,
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  twinCardLime: {
+    width: 270,
+    height: 156,
+    backgroundColor: '#E2FD52',
+    borderRadius: 28,
+    padding: 20,
+    marginRight: 10,
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'center',
+    shadowColor: '#073B3A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    elevation: 4,
   },
-  cardBrandBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    zIndex: 2,
-  },
-  cardBrandIcon: {
-    marginRight: 5,
-  },
-  cardBrandTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#073B3A',
-  },
-  cardWaveContainer: {
+  cardCurveContainer: {
     position: 'absolute',
-    top: -20,
-    right: -25,
-    width: 110,
-    height: 150,
+    top: -24,
+    right: -24,
+    width: 140,
+    height: 140,
   },
-  cardWavePine: {
+  cardCurveDarkTeal: {
     position: 'absolute',
     top: 0,
     right: 0,
-    width: 80,
-    height: 140,
-    backgroundColor: '#073B3A',
-    borderBottomLeftRadius: 50,
-    borderTopLeftRadius: 60,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: '#0A4C4B',
+    opacity: 0.7,
   },
-  cardWaveLime: {
+  cardCurveLimeWave: {
     position: 'absolute',
     top: 25,
     right: 25,
-    width: 50,
-    height: 100,
+    width: 85,
+    height: 85,
+    borderRadius: 42,
     backgroundColor: '#E2FD52',
-    borderBottomLeftRadius: 40,
-    borderTopLeftRadius: 50,
+    opacity: 0.25,
   },
-  cardAmountBlock: {
-    marginTop: 8,
-    zIndex: 2,
+  cardCurveLimeOuter: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: '#D4EE3C',
+    opacity: 0.8,
   },
-  cardAmountText: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#073B3A',
-    letterSpacing: -0.5,
+  cardCurvePineWave: {
+    position: 'absolute',
+    top: 22,
+    right: 22,
+    width: 85,
+    height: 85,
+    borderRadius: 42,
+    backgroundColor: '#073B3A',
+    opacity: 0.2,
   },
-  cardSubText: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginTop: 4,
-    fontWeight: '600',
-  },
-  cardFooterRow: {
+  cardTopHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     zIndex: 2,
   },
-  cardMeshPill: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#073B3A',
-    letterSpacing: 0.5,
-  },
-  cardCircles: {
+  cardLivePill: {
     flexDirection: 'row',
-  },
-  circleHalf: {
-    width: 20,
-    height: 20,
+    alignItems: 'center',
+    backgroundColor: 'rgba(226, 253, 82, 0.18)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 10,
   },
-
-  /* KURO CARD */
-  kuroCard: {
-    width: 220,
-    height: 155,
+  liveGreenDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#E2FD52',
-    borderRadius: 24,
-    marginRight: 10,
-    overflow: 'hidden',
-    justifyContent: 'space-between',
-    shadowColor: '#073B3A',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
+    marginRight: 5,
   },
-  kuroTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  kuroAsterisk: {
-    fontSize: 16,
-    color: '#073B3A',
-    marginRight: 6,
+  cardLivePillText: {
+    fontSize: 11,
     fontWeight: '800',
+    color: '#E2FD52',
+    letterSpacing: 0.5,
   },
-  kuroTitle: {
+  cardIconBoxSmall: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    backgroundColor: '#E2FD52',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardAccrualPill: {
+    backgroundColor: '#073B3A',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  cardAccrualPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#E2FD52',
+    letterSpacing: 0.5,
+  },
+  marginPillDark: {
+    backgroundColor: 'rgba(7, 59, 58, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  marginPillDarkText: {
     fontSize: 12,
     fontWeight: '800',
     color: '#073B3A',
   },
-  kuroWavePineBottom: {
-    backgroundColor: '#073B3A',
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 60,
-    padding: 16,
-    paddingTop: 18,
+  cardMainContent: {
+    zIndex: 2,
+    marginVertical: 4,
   },
-  kuroAmount: {
-    fontSize: 24,
+  cardMicroTitlePine: {
+    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  cardBigNumberPine: {
+    fontSize: 40,
     fontWeight: '900',
     color: '#FFFFFF',
-    marginBottom: 8,
+    letterSpacing: -0.6,
+    marginTop: 6,
   },
-  kuroFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  kuroCardNumber: {
-    fontSize: 10,
-    color: '#9CA3AF',
-    fontWeight: '600',
-  },
-  kuroVisaBadge: {
-    fontSize: 10,
-    color: '#E2FD52',
-    fontWeight: '800',
+  cardMicroTitleLime: {
+    fontSize: 18,
+    color: '#073B3A',
+    fontWeight: '900',
     letterSpacing: 0.8,
+  },
+  cardBigNumberLime: {
+    fontSize: 40,
+    fontWeight: '900',
+    color: '#073B3A',
+    letterSpacing: -0.6,
+    marginTop: 6,
+  },
+  cardBottomRow: {
+    zIndex: 2,
+  },
+  cardFooterSubPine: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontWeight: '500',
+  },
+  cardFooterSubLime: {
+    fontSize: 13,
+    color: 'rgba(7, 59, 58, 0.75)',
+    fontWeight: '600',
   },
 
   /* DAYTIME LISTENING STATUS CARD (CONCEPTZILLA EXACT CARD STRUCTURE) */
@@ -1371,7 +1564,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listeningMicroHeader: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#6E827D',
     fontWeight: '700',
     letterSpacing: 0.8,
@@ -1391,7 +1584,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   listeningStatusPillText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
@@ -1428,7 +1621,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2FD52',
   },
   shiftToggleBtnText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '800',
     color: '#073B3A',
   },
@@ -1436,13 +1629,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   listeningHeroTitle: {
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: '800',
     color: '#073B3A',
     letterSpacing: -0.2,
   },
   listeningHeroSub: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#6E827D',
     marginTop: 2,
     fontWeight: '500',
@@ -1458,7 +1651,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   noisePillText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: '#4B5563',
   },
@@ -1482,7 +1675,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   streamSingleBtnText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
   },
   streamSingleBtnTextStart: {
@@ -1512,13 +1705,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   audioSnippetLabel: {
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: '800',
     color: '#6E827D',
     letterSpacing: 0.6,
   },
   audioSnippetText: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#073B3A',
     fontWeight: '700',
     marginTop: 1,
@@ -1532,7 +1725,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   micHardwareBadgeText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '800',
     color: '#376300',
     letterSpacing: 0.5,
@@ -1556,19 +1749,19 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   hudLabel: {
-    fontSize: 7.5,
+    fontSize: 9.5,
     fontWeight: '800',
     color: '#9CA3AF',
     letterSpacing: 0.5,
   },
   hudVal: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     color: '#FFFFFF',
     marginTop: 1,
   },
   hudValGreen: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     color: '#E2FD52',
     marginTop: 1,
@@ -1598,7 +1791,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   openStreamHudText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '800',
     color: '#073B3A',
   },
@@ -1614,7 +1807,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   streamTurnPresetText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: '#073B3A',
   },
@@ -1640,7 +1833,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   wholesaleMicroHeader: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#6E827D',
     fontWeight: '700',
     letterSpacing: 0.8,
@@ -1654,7 +1847,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   ocrHardwareBadgeText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '800',
     color: '#376300',
     letterSpacing: 0.5,
@@ -1673,13 +1866,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   wholesaleCardTitle: {
-    fontSize: 16,
+    fontSize: 19,
     fontWeight: '800',
     color: '#073B3A',
     letterSpacing: -0.2,
   },
   wholesaleCardSub: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#6E827D',
     marginTop: 2,
     fontWeight: '500',
@@ -1697,7 +1890,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   wholesaleEmptyText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     color: '#9CA3AF',
   },
@@ -1717,19 +1910,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   wholesaleBasisLabel: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '800',
     color: '#6E827D',
     letterSpacing: 0.5,
   },
   wholesaleBasisValue: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '800',
     color: '#073B3A',
     marginTop: 2,
   },
   wholesaleSupplierText: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
   },
@@ -1747,7 +1940,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   scanSlipPrimaryText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '800',
     color: '#073B3A',
   },
@@ -1763,7 +1956,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   manualSlipSecondaryText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: '#374151',
   },
@@ -1796,18 +1989,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   confirmTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
     color: '#073B3A',
     marginBottom: 2,
   },
   confirmQuestion: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#1F2937',
     lineHeight: 16,
   },
   confirmSpokenQuote: {
-    fontSize: 11,
+    fontSize: 13,
     fontStyle: 'italic',
     color: '#4B5563',
     marginTop: 4,
@@ -1827,7 +2020,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   confirmYesText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '800',
     color: '#073B3A',
   },
@@ -1842,7 +2035,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   confirmNoText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     color: '#6B7280',
   },
@@ -1862,13 +2055,13 @@ const styles = StyleSheet.create({
     paddingRight: 10,
   },
   limeBannerTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     color: '#073B3A',
     marginBottom: 4,
   },
   limeBannerSub: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#073B3A',
     opacity: 0.85,
     fontWeight: '500',
@@ -1883,7 +2076,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   limeCloseIcon: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#E2FD52',
   },
 
@@ -1908,14 +2101,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   periodHeader: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#6E827D',
     fontWeight: '700',
     letterSpacing: 0.8,
   },
   balanceHeroAmount: {
     marginTop: 5,
-    fontSize: 30,
+    fontSize: 34,
     color: '#073B3A',
     fontWeight: '900',
     letterSpacing: -0.8,
@@ -1936,7 +2129,7 @@ const styles = StyleSheet.create({
     marginRight: 5,
   },
   balanceLiveText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.5,
     color: '#376300',
@@ -1964,34 +2157,34 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   arrowSymbol: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#6B7280',
     fontWeight: '700',
   },
   periodLabel: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#111827',
     fontWeight: '500',
   },
   periodValueCredit: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#111827',
     fontWeight: '700',
   },
   periodValueDebit: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#111827',
     fontWeight: '700',
   },
   periodValueAccrual: {
-    fontSize: 13,
+    fontSize: 15.5,
     color: '#073B3A',
     fontWeight: '800',
   },
 
   /* 4. TEAL ACTION SQUIRCLES */
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 17.5,
     fontWeight: '800',
     color: '#111827',
     marginBottom: 12,
@@ -2020,13 +2213,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   actionGridTitle: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#FFFFFF',
     fontWeight: '800',
     textAlign: 'center',
   },
   actionGridSub: {
-    fontSize: 10,
+    fontSize: 11.5,
     color: '#E2FD52',
     fontWeight: '600',
     marginTop: 2,
@@ -2056,7 +2249,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tealCardText: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#FFFFFF',
     fontWeight: '700',
   },
@@ -2079,7 +2272,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#073B3A',
   },
   sabotageTabText: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#6B7280',
     fontWeight: '700',
   },
@@ -2095,7 +2288,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   sabotageVerdictText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#374151',
     lineHeight: 18,
   },
@@ -2108,7 +2301,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   customizeLink: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: '#073B3A',
   },
@@ -2153,12 +2346,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   donutTotalKg: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     color: '#111827',
   },
   donutSubText: {
-    fontSize: 9,
+    fontSize: 11,
     color: '#6B7280',
     fontWeight: '600',
   },
@@ -2178,7 +2371,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   legendName: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#4B5563',
   },
   legendBold: {
@@ -2201,7 +2394,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   scenarioPillText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: '#073B3A',
   },
@@ -2233,17 +2426,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   txTitleText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     color: '#111827',
     marginBottom: 2,
   },
   txCategoryText: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#6B7280',
   },
   txAmountText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
   },
   txCreditColor: {
@@ -2251,6 +2444,94 @@ const styles = StyleSheet.create({
   },
   txDebitColor: {
     color: '#DC2626',
+  },
+
+  actionsGridRow2: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  actionGridCardLarge: {
+    flex: 1,
+    backgroundColor: '#073B3A',
+    borderRadius: 18,
+    padding: 10,
+    shadowColor: '#073B3A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  limeIconBoxRow2: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#E2FD52',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionTagBadgeRose: {
+    backgroundColor: 'rgba(239, 68, 68, 0.25)',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  actionTagTextRose: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#FCA5A5',
+  },
+  actionCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  actionCardTitle: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  actionCardSub: {
+    fontSize: 12.5,
+    color: '#E2FD52',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  actionGridCardTitle: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  actionGridCardSub: {
+    fontSize: 12,
+    color: '#E2FD52',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  actionTagBadge: {
+    backgroundColor: 'rgba(226, 253, 82, 0.2)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  actionTagText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#E2FD52',
+  },
+  actionTagBadgeAmber: {
+    backgroundColor: 'rgba(245, 158, 11, 0.28)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  actionTagTextAmber: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FCD34D',
   },
 
   /* 10. BOTTOM DOCK (4-BUTTON BALANCED CONCEPTZILLA DOCK) */
@@ -2302,7 +2583,7 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   dockIcon: {
-    fontSize: 20,
+    fontSize: 22,
     opacity: 0.4,
   },
   dockIconActive: {

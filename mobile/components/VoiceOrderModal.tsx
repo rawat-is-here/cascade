@@ -162,99 +162,94 @@ export const VoiceOrderModal: React.FC<Props> = ({
               </TouchableOpacity>
             </View>
 
-            {/* TAB 1: VOICE FEED MODE */}
+            {/* TAB 1: VOCAL FEED MODE ONLY */}
             {activeTab === 'VOICE' && (
               <View>
-                {/* Live Microphone Stream Card */}
+                {/* Live Microphone Vocal Feed Card */}
                 <View style={styles.streamHeroCard}>
                   <View style={styles.streamHeroTop}>
                     <View style={styles.streamStatusBadge}>
-                      <View style={styles.pulseDot} />
-                      <Text style={styles.streamStatusText}>MIC STREAM READY</Text>
+                      <View style={[styles.pulseDot, isSimulatingFeed && styles.pulseDotActive]} />
+                      <Text style={styles.streamStatusText}>
+                        {isSimulatingFeed ? 'STREAM RECORDING ACTIVE' : 'MIC STREAM READY'}
+                      </Text>
                     </View>
                     <Text style={styles.streamHzText}>16kHz PCM / Mono</Text>
                   </View>
 
-                  <View style={styles.waveformRow}>
-                    <View style={[styles.waveBar, { height: 14 }]} />
-                    <View style={[styles.waveBar, { height: 26 }]} />
-                    <View style={[styles.waveBar, { height: 38, backgroundColor: '#E2FD52' }]} />
-                    <View style={[styles.waveBar, { height: 22 }]} />
-                    <View style={[styles.waveBar, { height: 44, backgroundColor: '#E2FD52' }]} />
-                    <View style={[styles.waveBar, { height: 32 }]} />
-                    <View style={[styles.waveBar, { height: 18 }]} />
-                    <View style={[styles.waveBar, { height: 28, backgroundColor: '#E2FD52' }]} />
-                    <View style={[styles.waveBar, { height: 16 }]} />
+                  {/* Concentric Microphone Radar Visualizer */}
+                  <View style={styles.vocalRadarCenter}>
+                    <View style={[styles.radarOuterRing, isSimulatingFeed && styles.radarOuterRingActive]}>
+                      <View style={[styles.radarInnerRing, isSimulatingFeed && styles.radarInnerRingActive]}>
+                        <View style={styles.radarMicCircle}>
+                          <Ionicons
+                            name={isSimulatingFeed ? 'radio' : 'mic'}
+                            size={34}
+                            color="#073B3A"
+                          />
+                        </View>
+                      </View>
+                    </View>
                   </View>
 
+                  <View style={styles.waveformRow}>
+                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 26 : 14 }]} />
+                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 42 : 24 }]} />
+                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 56 : 38, backgroundColor: '#E2FD52' }]} />
+                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 38 : 22 }]} />
+                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 60 : 44, backgroundColor: '#E2FD52' }]} />
+                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 42 : 32 }]} />
+                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 26 : 18 }]} />
+                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 48 : 28, backgroundColor: '#E2FD52' }]} />
+                    <View style={[styles.waveBar, { height: isSimulatingFeed ? 22 : 16 }]} />
+                  </View>
+
+                  {/* Real-time Spoken Text Readout / Guidance */}
+                  <View style={styles.vocalStatusBox}>
+                    <Text style={styles.vocalStatusHeading}>
+                      {isSimulatingFeed
+                        ? 'LISTENING TO STREET SPOKEN TURN...'
+                        : 'READY FOR VOCAL INPUT'}
+                    </Text>
+                    <Text style={styles.vocalStatusSub}>
+                      {isSimulatingFeed
+                        ? (spokenText ? `“${spokenText}”` : 'Capturing stall speech stream...')
+                        : 'Speak naturally in Hindi, Hinglish, or English. Stall background noise is automatically filtered.'}
+                    </Text>
+                  </View>
+
+                  {/* Primary Vocal Feed Action Button */}
                   <TouchableOpacity
                     style={[styles.streamTriggerBtn, isSimulatingFeed && styles.streamTriggerBtnActive]}
                     onPress={handleSimulateLiveFeed}
                     disabled={isSimulatingFeed || loading}
                   >
-                    {isSimulatingFeed ? (
+                    {isSimulatingFeed || loading ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <ActivityIndicator color="#073B3A" size="small" style={{ marginRight: 8 }} />
-                        <Text style={styles.streamTriggerBtnText}>Listening to Spoken Feed...</Text>
+                        <ActivityIndicator color="#073B3A" size="small" style={{ marginRight: 10 }} />
+                        <Text style={styles.streamTriggerBtnText}>
+                          {loading ? 'Posting to Stall Ledger...' : 'Listening to Vocal Feed...'}
+                        </Text>
                       </View>
                     ) : (
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Ionicons name="radio" size={18} color="#073B3A" style={{ marginRight: 8 }} />
-                        <Text style={styles.streamTriggerBtnText}>Simulate Live Spoken Turn</Text>
+                        <Ionicons name="mic" size={22} color="#073B3A" style={{ marginRight: 8 }} />
+                        <Text style={styles.streamTriggerBtnText}>Capture Live Vocal Turn</Text>
                       </View>
                     )}
                   </TouchableOpacity>
-                </View>
 
-                {/* Input Phrase Box */}
-                <View style={styles.inputCard}>
-                  <Text style={styles.inputLabel}>SPEAK OR ENTER CUSTOM STREET PHRASE</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="e.g. 4kg aloo 80 rupaye, 50 ka tamatar..."
-                    placeholderTextColor="#9CA3AF"
-                    value={spokenText}
-                    onChangeText={setSpokenText}
-                    onSubmitEditing={() => handleVoiceSubmit()}
-                    returnKeyType="done"
-                  />
-                  <TouchableOpacity
-                    style={[styles.processBtn, (!spokenText.trim() || loading) && styles.processBtnDisabled]}
-                    onPress={() => handleVoiceSubmit()}
-                    disabled={!spokenText.trim() || loading}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color="#073B3A" size="small" />
-                    ) : (
-                      <>
-                        <Ionicons name="flash" size={16} color="#073B3A" style={{ marginRight: 6 }} />
-                        <Text style={styles.processBtnText}>Parse & Post Vocal Sale</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-
-                {/* Dynamic Street Dialogue Samples */}
-                <Text style={styles.sectionHeading}>Tap Realistic Street Dialogue to Test</Text>
-                <Text style={styles.sectionSub}>
-                  Zero hallucination. Each phrase is dynamically parsed by Indic NLP Lexer.
-                </Text>
-
-                <View style={styles.chipsContainer}>
-                  {SAMPLE_ORDERS.map((sample, idx) => (
-                    <TouchableOpacity
-                      key={idx}
-                      style={styles.chip}
-                      onPress={() => handleVoiceSubmit(sample.label)}
-                      disabled={loading}
-                    >
-                      <View style={{ flex: 1, marginRight: 10 }}>
-                        <Text style={styles.chipText}>“{sample.label}”</Text>
-                        <Text style={styles.chipNote}>{sample.note}</Text>
-                      </View>
-                      <Ionicons name="arrow-forward-circle" size={22} color="#073B3A" />
-                    </TouchableOpacity>
-                  ))}
+                  {/* Acoustic Noise Shield Badges */}
+                  <View style={styles.vocalBadgesRow}>
+                    <View style={styles.vocalBadge}>
+                      <Ionicons name="shield-checkmark" size={13} color="#E2FD52" style={{ marginRight: 4 }} />
+                      <Text style={styles.vocalBadgeText}>Noise Shield: ECAPA-TDNN</Text>
+                    </View>
+                    <View style={styles.vocalBadge}>
+                      <Ionicons name="flash-outline" size={13} color="#E2FD52" style={{ marginRight: 4 }} />
+                      <Text style={styles.vocalBadgeText}>Indic Lexer: Real-time</Text>
+                    </View>
+                  </View>
                 </View>
               </View>
             )}
@@ -366,7 +361,7 @@ export const VoiceOrderModal: React.FC<Props> = ({
                   <TouchableOpacity
                     style={[
                       styles.postSlipBtn,
-                      (!slipAmount || parseFloat(slipAmount) <= 0) && styles.processBtnDisabled
+                      (!slipAmount || parseFloat(slipAmount) <= 0) && styles.postSlipBtnDisabled
                     ]}
                     onPress={handleHandwrittenSubmit}
                     disabled={!slipAmount || parseFloat(slipAmount) <= 0}
@@ -539,86 +534,91 @@ const styles = StyleSheet.create({
     color: '#073B3A',
   },
 
-  /* INPUT CARD */
-  inputCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+  /* RADAR & VOCAL VISUALIZER */
+  vocalRadarCenter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 18,
   },
-  inputLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#6B7280',
-    letterSpacing: 0.6,
-    marginBottom: 8,
-  },
-  textInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: '#111827',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    marginBottom: 12,
-  },
-  processBtn: {
-    backgroundColor: '#E2FD52',
-    borderRadius: 14,
-    paddingVertical: 12,
-    flexDirection: 'row',
+  radarOuterRing: {
+    width: 106,
+    height: 106,
+    borderRadius: 53,
+    backgroundColor: 'rgba(226, 253, 82, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  processBtnDisabled: {
-    opacity: 0.5,
+  radarOuterRingActive: {
+    backgroundColor: 'rgba(226, 253, 82, 0.22)',
   },
-  processBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#073B3A',
+  radarInnerRing: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: 'rgba(226, 253, 82, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
-  /* DYNAMIC SAMPLES */
-  sectionHeading: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 2,
+  radarInnerRingActive: {
+    backgroundColor: 'rgba(226, 253, 82, 0.4)',
   },
-  sectionSub: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginBottom: 12,
+  radarMicCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#E2FD52',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#E2FD52',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  chipsContainer: {
-    gap: 8,
+  pulseDotActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  vocalStatusBox: {
+    backgroundColor: 'rgba(0, 0, 0, 0.22)',
+    borderRadius: 16,
+    padding: 14,
     marginBottom: 16,
-  },
-  chip: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 14,
-    padding: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(226, 253, 82, 0.15)',
+    alignItems: 'center',
+  },
+  vocalStatusHeading: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#E2FD52',
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  vocalStatusSub: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  vocalBadgesRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 14,
+  },
+  vocalBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
   },
-  chipText: {
-    fontSize: 13,
+  vocalBadgeText: {
+    fontSize: 11,
     fontWeight: '700',
-    color: '#073B3A',
-    marginBottom: 2,
-  },
-  chipNote: {
-    fontSize: 10,
-    color: '#6B7280',
-    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.85)',
   },
 
   /* NOTEPAD / HANDWRITTEN SLIP STYLING */
@@ -792,6 +792,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 6,
     elevation: 3,
+  },
+  postSlipBtnDisabled: {
+    opacity: 0.5,
   },
   postSlipBtnText: {
     fontSize: 14,

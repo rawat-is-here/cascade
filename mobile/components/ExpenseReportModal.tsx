@@ -23,6 +23,7 @@ export interface Transaction {
 interface Props {
   visible: boolean;
   onClose: () => void;
+  language?: 'en' | 'hi';
   transactions: Transaction[];
   totalSales: number;
   totalExpenses: number;
@@ -34,6 +35,7 @@ interface Props {
 export const ExpenseReportModal: React.FC<Props> = ({
   visible,
   onClose,
+  language = 'en',
   transactions,
   totalSales,
   totalExpenses,
@@ -41,6 +43,7 @@ export const ExpenseReportModal: React.FC<Props> = ({
   onDeleteTransaction,
   onAddTransaction
 }) => {
+  const isHi = language === 'hi';
   const [filter, setFilter] = useState<'ALL' | 'SALES' | 'EXPENSES'>('ALL');
   const [showAddManual, setShowAddManual] = useState(false);
   const [manualTitle, setManualTitle] = useState('');
@@ -87,8 +90,8 @@ export const ExpenseReportModal: React.FC<Props> = ({
                 <Ionicons name="receipt-outline" size={20} color="#073B3A" />
               </View>
               <View style={{ marginLeft: 10 }}>
-                <Text style={styles.headerTitle}>Expense & Sales Report</Text>
-                <Text style={styles.headerSub}>Live Double-Entry Ledger Transactions</Text>
+                <Text style={styles.headerTitle}>{isHi ? 'खर्च और बिक्री रिपोर्ट' : 'Expense & Sales Report'}</Text>
+                <Text style={styles.headerSub}>{isHi ? 'दुकान का वास्तविक बहीखाता' : 'Live Double-Entry Ledger Transactions'}</Text>
               </View>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -99,17 +102,17 @@ export const ExpenseReportModal: React.FC<Props> = ({
           {/* Balance Summary Header Cards */}
           <View style={styles.summaryBar}>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>TOTAL SALES (IN)</Text>
+              <Text style={styles.summaryLabel}>{isHi ? 'कुल बिक्री (आवक)' : 'TOTAL SALES (IN)'}</Text>
               <Text style={styles.summaryCredit}>+₹{totalSales.toLocaleString('en-IN')}</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>EXPENSES (OUT)</Text>
+              <Text style={styles.summaryLabel}>{isHi ? 'कुल खर्च (जावक)' : 'EXPENSES (OUT)'}</Text>
               <Text style={styles.summaryDebit}>-₹{totalExpenses.toLocaleString('en-IN')}</Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>NET DRAWER</Text>
+              <Text style={styles.summaryLabel}>{isHi ? 'गल्ला शेष' : 'NET DRAWER'}</Text>
               <Text style={[styles.summaryNet, { color: netBalance >= 0 ? '#073B3A' : '#DC2626' }]}>
                 ₹{netBalance.toLocaleString('en-IN')}
               </Text>
@@ -123,7 +126,7 @@ export const ExpenseReportModal: React.FC<Props> = ({
               onPress={() => setFilter('ALL')}
             >
               <Text style={[styles.filterText, filter === 'ALL' && styles.filterTextActive]}>
-                All ({transactions.length})
+                {isHi ? 'सभी' : 'All'} ({transactions.length})
               </Text>
             </TouchableOpacity>
 
@@ -132,7 +135,7 @@ export const ExpenseReportModal: React.FC<Props> = ({
               onPress={() => setFilter('SALES')}
             >
               <Text style={[styles.filterText, filter === 'SALES' && styles.filterTextActive]}>
-                Sales ({transactions.filter(t => t.isCredit).length})
+                {isHi ? 'बिक्री' : 'Sales'} ({transactions.filter(t => t.isCredit).length})
               </Text>
             </TouchableOpacity>
 
@@ -141,7 +144,7 @@ export const ExpenseReportModal: React.FC<Props> = ({
               onPress={() => setFilter('EXPENSES')}
             >
               <Text style={[styles.filterText, filter === 'EXPENSES' && styles.filterTextActive]}>
-                Expenses ({transactions.filter(t => !t.isCredit).length})
+                {isHi ? 'खर्च' : 'Expenses'} ({transactions.filter(t => !t.isCredit).length})
               </Text>
             </TouchableOpacity>
 
@@ -150,21 +153,21 @@ export const ExpenseReportModal: React.FC<Props> = ({
               onPress={() => setShowAddManual(!showAddManual)}
             >
               <Ionicons name={showAddManual ? 'close' : 'add'} size={16} color="#073B3A" />
-              <Text style={styles.addManualBtnText}>{showAddManual ? 'Cancel' : 'Add'}</Text>
+              <Text style={styles.addManualBtnText}>{showAddManual ? (isHi ? 'रद्द करें' : 'Cancel') : (isHi ? 'जोड़ें' : 'Add')}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Quick Manual Entry Drawer */}
           {showAddManual && (
             <View style={styles.manualEntryBox}>
-              <Text style={styles.manualEntryTitle}>Record Manual Ledger Entry</Text>
+              <Text style={styles.manualEntryTitle}>{isHi ? 'हाथ से प्रविष्टि दर्ज करें' : 'Record Manual Ledger Entry'}</Text>
               <View style={styles.typeSelectorRow}>
                 <TouchableOpacity
                   style={[styles.typeBtn, manualType === 'CREDIT' && styles.typeBtnCreditActive]}
                   onPress={() => setManualType('CREDIT')}
                 >
                   <Text style={[styles.typeBtnText, manualType === 'CREDIT' && styles.typeBtnTextActive]}>
-                    + Sale (Money In)
+                    {isHi ? '+ बिक्री (आवक)' : '+ Sale (Money In)'}
                   </Text>
                 </TouchableOpacity>
 
@@ -173,14 +176,14 @@ export const ExpenseReportModal: React.FC<Props> = ({
                   onPress={() => setManualType('DEBIT')}
                 >
                   <Text style={[styles.typeBtnText, manualType === 'DEBIT' && styles.typeBtnTextActive]}>
-                    - Expense (Money Out)
+                    {isHi ? '- खर्च (जावक)' : '- Expense (Money Out)'}
                   </Text>
                 </TouchableOpacity>
               </View>
 
               <TextInput
                 style={styles.manualInput}
-                placeholder="Description (e.g. Chai, Auto Fare, Extra Aloo)"
+                placeholder={isHi ? 'विवरण (जैसे: चाय, ऑटो भाड़ा, आलू)' : 'Description (e.g. Chai, Auto Fare, Extra Aloo)'}
                 placeholderTextColor="#9CA3AF"
                 value={manualTitle}
                 onChangeText={setManualTitle}
@@ -189,14 +192,14 @@ export const ExpenseReportModal: React.FC<Props> = ({
               <View style={{ flexDirection: 'row', marginTop: 8 }}>
                 <TextInput
                   style={[styles.manualInput, { flex: 1, marginRight: 8 }]}
-                  placeholder="Amount (₹)"
+                  placeholder={isHi ? 'राशि (₹)' : 'Amount (₹)'}
                   placeholderTextColor="#9CA3AF"
                   keyboardType="numeric"
                   value={manualAmount}
                   onChangeText={setManualAmount}
                 />
                 <TouchableOpacity style={styles.saveManualBtn} onPress={handleCreateManual}>
-                  <Text style={styles.saveManualBtnText}>Post to Ledger</Text>
+                  <Text style={styles.saveManualBtnText}>{isHi ? 'खाते में जोड़ें' : 'Post to Ledger'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -207,9 +210,9 @@ export const ExpenseReportModal: React.FC<Props> = ({
             {filteredTransactions.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="document-text-outline" size={36} color="#D1D5DB" />
-                <Text style={styles.emptyTitle}>No Transactions Recorded</Text>
+                <Text style={styles.emptyTitle}>{isHi ? 'कोई लेन-देन दर्ज नहीं है' : 'No Transactions Recorded'}</Text>
                 <Text style={styles.emptySub}>
-                  Voice orders, Mandi OCR slips, and UPI payments will appear here in real-time.
+                  {isHi ? 'बोलकर दिए ऑर्डर, मंडी रसीदें और UPI भुगतान यहाँ तुरंत दिखेंगे।' : 'Voice orders, Mandi OCR slips, and UPI payments will appear here in real-time.'}
                 </Text>
               </View>
             ) : (

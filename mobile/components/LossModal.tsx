@@ -5,13 +5,15 @@ import { Ionicons } from '@expo/vector-icons';
 interface Props {
   visible: boolean;
   onClose: () => void;
+  language?: 'en' | 'hi';
   apiBaseUrl?: string;
   initialCommodity?: string;
   initialMissingKg?: number;
   onCalculate?: (spoilage: number, eating: number, theft: number, commodity?: string, missingKg?: number) => void;
 }
 
-export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, initialCommodity = 'Tomatoes', initialMissingKg = 4.0, onCalculate }) => {
+export const LossModal: React.FC<Props> = ({ visible, onClose, language = 'en', apiBaseUrl, initialCommodity = 'Tomatoes', initialMissingKg = 4.0, onCalculate }) => {
+  const isHi = language === 'hi';
   const [commodity, setCommodity] = useState(initialCommodity);
   const [missingKg, setMissingKg] = useState(initialMissingKg.toString());
   const [temp, setTemp] = useState('39');
@@ -84,8 +86,8 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, initi
                   <Ionicons name="leaf-outline" size={20} color="#073B3A" />
                 </View>
                 <View>
-                  <Text style={styles.title}>Check stock loss</Text>
-                  <Text style={styles.sub}>See why some stock may be missing.</Text>
+                  <Text style={styles.title}>{isHi ? 'स्टॉक नुकसान व चोरी जांचें' : 'Report Spoilage, Loss & Theft'}</Text>
+                  <Text style={styles.sub}>{isHi ? 'माल गायब होने, गर्मी से सड़ने या चोरी का सटीक हिसाब लगाएं।' : 'Attribute stock loss into spoilage, staff lunch and theft.'}</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -94,7 +96,7 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, initi
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Product</Text>
+              <Text style={styles.fieldLabel}>{isHi ? 'सामग्री (सब्जी / राशन)' : 'Commodity'}</Text>
               <View style={styles.chipRow}>
                 {['Tomatoes', 'Onions', 'Potatoes'].map(c => (
                   <TouchableOpacity
@@ -112,7 +114,7 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, initi
 
             <View style={styles.rowTwo}>
               <View style={[styles.fieldGroup, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.fieldLabel}>Missing stock (kg)</Text>
+                <Text style={styles.fieldLabel}>{isHi ? 'खोया माल (किलो)' : 'Missing stock (kg)'}</Text>
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
@@ -122,7 +124,7 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, initi
               </View>
 
               <View style={[styles.fieldGroup, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.fieldLabel}>Temperature (°C)</Text>
+                <Text style={styles.fieldLabel}>{isHi ? 'तापमान (°C)' : 'Temperature (°C)'}</Text>
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
@@ -133,7 +135,7 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, initi
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Time in heat (hours)</Text>
+              <Text style={styles.fieldLabel}>{isHi ? 'धूप/गर्मी में समय (घंटे)' : 'Time in heat (hours)'}</Text>
               <TextInput
                 style={styles.input}
                 keyboardType="numeric"
@@ -148,23 +150,23 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, initi
                 <ActivityIndicator color="#073B3A" />
               ) : (
                 <>
-                  <Ionicons name="sparkles-outline" size={19} color="#073B3A" />
-                  <Text style={styles.calcBtnText}>Check possible reasons</Text>
+                  <Ionicons name="pie-chart-outline" size={19} color="#073B3A" />
+                  <Text style={styles.calcBtnText}>{isHi ? 'नुकसान का हिसाब लगाएं' : 'Calculate Loss Attribution'}</Text>
                 </>
               )}
             </TouchableOpacity>
 
             {result && (
               <View style={styles.resultsCard}>
-                <Text style={styles.resEyebrow}>STOCK LOSS SUMMARY</Text>
-                <Text style={styles.resHeading}>Possible reasons</Text>
+                <Text style={styles.resEyebrow}>{isHi ? 'नुकसान का सटीक बंटवारा (DIRICHLET LOSS)' : 'PROBABILISTIC LOSS ATTRIBUTION'}</Text>
+                <Text style={styles.resHeading}>{isHi ? 'कारणों का विभाजन' : 'Attribution Breakdown'}</Text>
                 
                 <View style={styles.statRow}>
                   <View style={styles.reasonCopy}>
                     <View style={[styles.reasonIcon, { backgroundColor: '#E9F7EF' }]}>
                       <Ionicons name="thermometer-outline" size={17} color="#073B3A" />
                     </View>
-                    <Text style={styles.statLabel}>Heat spoilage</Text>
+                    <Text style={styles.statLabel}>{isHi ? 'गर्मी से सड़न (Heat Rot)' : 'Heat spoilage'}</Text>
                   </View>
                   <Text style={[styles.statVal, { color: '#073B3A' }]}>{result.spoilage}%</Text>
                 </View>
@@ -175,7 +177,7 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, initi
                     <View style={[styles.reasonIcon, { backgroundColor: '#F1FFE5' }]}>
                       <Ionicons name="restaurant-outline" size={17} color="#5B7B00" />
                     </View>
-                    <Text style={styles.statLabel}>Family use</Text>
+                    <Text style={styles.statLabel}>{isHi ? 'परिवार/स्टाफ का खाना (Staff Lunch)' : 'Family & staff meal'}</Text>
                   </View>
                   <Text style={[styles.statVal, { color: '#073B3A' }]}>{result.eating}%</Text>
                 </View>
@@ -184,9 +186,9 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, initi
                 <View style={styles.statRow}>
                   <View style={styles.reasonCopy}>
                     <View style={[styles.reasonIcon, { backgroundColor: '#FFF1F0' }]}>
-                      <Ionicons name="alert-circle-outline" size={17} color="#C63C32" />
+                      <Ionicons name="shield-outline" size={17} color="#C63C32" />
                     </View>
-                    <Text style={styles.statLabel}>Other loss</Text>
+                    <Text style={styles.statLabel}>{isHi ? 'चोरी / गिरा हुआ माल (Theft & Waste)' : 'Theft & unexplained'}</Text>
                   </View>
                   <Text style={[styles.statVal, { color: '#DC2626' }]}>{result.theft}%</Text>
                 </View>
@@ -195,7 +197,7 @@ export const LossModal: React.FC<Props> = ({ visible, onClose, apiBaseUrl, initi
             )}
 
             <TouchableOpacity style={styles.applyBtn} onPress={onClose}>
-              <Text style={styles.applyBtnText}>Save changes</Text>
+              <Text style={styles.applyBtnText}>{isHi ? 'खाते में नुकसान दर्ज करें' : 'Record Loss into Ledger'}</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -247,12 +249,12 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#111827',
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
   },
   sub: {
     color: '#667A75',
-    fontSize: 13,
+    fontSize: 14.5,
     marginTop: 3,
     fontWeight: '500',
   },
@@ -273,7 +275,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     color: '#374151',
-    fontSize: 13,
+    fontSize: 14.5,
     marginBottom: 6,
     fontWeight: '700',
   },
@@ -306,7 +308,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     color: '#4B5563',
-    fontSize: 13,
+    fontSize: 14.5,
     fontWeight: '600',
   },
   chipTextActive: {
@@ -329,7 +331,7 @@ const styles = StyleSheet.create({
   },
   calcBtnText: {
     color: '#073B3A',
-    fontSize: 14,
+    fontSize: 15.5,
     fontWeight: '900',
     marginLeft: 8,
   },
@@ -343,14 +345,14 @@ const styles = StyleSheet.create({
   },
   resEyebrow: {
     color: '#6E827D',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.8,
     marginBottom: 4,
   },
   resHeading: {
     color: '#111827',
-    fontSize: 17,
+    fontSize: 19,
     fontWeight: '800',
     marginBottom: 10,
   },
@@ -373,11 +375,11 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     color: '#4B5563',
-    fontSize: 13,
+    fontSize: 14.5,
     fontWeight: '500',
   },
   statVal: {
-    fontSize: 16,
+    fontSize: 17.5,
     fontWeight: '800',
   },
   track: {
@@ -399,7 +401,7 @@ const styles = StyleSheet.create({
   },
   applyBtnText: {
     color: '#E2FD52',
-    fontSize: 14,
+    fontSize: 15.5,
     fontWeight: '800',
   },
 });
